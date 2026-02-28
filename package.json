@@ -1,0 +1,19 @@
+{
+  "name": "apple-music-editor",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "electron": "electron ."
+  },
+  "author": "Andrew Chen (github.com/achen1296)",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^40.6.0"
+  },
+  "type": "commonjs",
+  "dependencies": {
+    "typescript": "^5.9.3",
+    "zeromq": "^6.5.0"
+  }
+}

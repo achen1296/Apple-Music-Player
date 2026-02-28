@@ -1,0 +1,16 @@
+* {
+    background-color: black;
+    color: white;
+}
+
+#player,
+#rightSidebar {
+    border-style: solid;
+    border-color: gray;
+    border-width: 2px;
+}
+
+.topBarButtonActive {
+    /* repeat/shuffle buttons when repeat/shuffle is enabled */
+    border: inset;
+}

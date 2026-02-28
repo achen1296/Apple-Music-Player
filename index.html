@@ -1,0 +1,92 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'"
+    />
+    <meta
+      http-equiv="X-Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'"
+    />
+    <title>Apple Music (open-source player by achen1296)</title>
+    <link href="css/layout.css" rel="stylesheet" />
+    <link href="css/theme.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="player">
+      <audio id="currentAudio" preload="auto" autoplay></audio>
+      <div id="currentTrackText">
+        <span id="currentTrackNameText">...</span>
+        <span id="currentTrackArtistText">...</span>
+        <span id="currentTrackAlbumText">...</span>
+      </div>
+      <div id="playerButtons">
+        <button id="skipPreviousButton" class="topBarButton">⏮</button>
+        <button id="playPauseButton" class="topBarButton">⏯</button>
+        <button id="skipNextButton" class="topBarButton">⏭</button>
+        <button id="repeatButton" class="topBarButton">🔁</button>
+        <button id="shuffleButton" class="topBarButton">🔀</button>
+      </div>
+      <div id="playTime">
+        <input
+          id="playTimeSlider"
+          type="range"
+          min="0"
+          max="1"
+          value="0"
+          step="any"
+          class="slider"
+        />
+        <span id="playTimeText" class="sliderText">0:00 / 0:00</span>
+      </div>
+      <div id="volume">
+        <input
+          id="volumeSlider"
+          type="range"
+          min="0"
+          max="100"
+          value="100"
+          step="1"
+          class="slider"
+        />
+        <span id="volumeText" class="sliderText">100% volume</span>
+      </div>
+      <div id="playRate">
+        <input
+          id="playRateSlider"
+          type="range"
+          min="0"
+          max="4"
+          value="1"
+          step="0.1"
+          class="slider"
+        />
+        <span id="playRateText" class="sliderText">1.0x speed</span>
+      </div>
+    </div>
+    <main>
+      <div id="albums">
+        <h1>Albums</h1>
+        <ul id="albumList">
+          <li>Loading...</li>
+        </ul>
+      </div>
+      <div id="playlists">
+        <h1>Playlists</h1>
+        <ul id="playlistList">
+          <li>Loading...</li>
+        </ul>
+      </div>
+    </main>
+    <div id="rightSidebar">
+      <h1>History</h1>
+      <ul id="trackHistory"></ul>
+      <h1>Up Next</h1>
+      <ul id="trackQueue"></ul>
+    </div>
+  </body>
+  <script src="./renderer.js"></script>
+</html>
