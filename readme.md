@@ -36,4 +36,8 @@ These are features I will likely never add, because it isn't difficult to just o
 - Any integration with the Apple Music/iTunes online storefront/subscription service, except for (todo) the link to "Show in iTunes store" (which was easy to implement as opening in the regular web browser so why not)
 - Adding new tracks in general (that is, both from the store and from local files) (you don't do this nearly as often as editing/organizing and the official program already supports adding many tracks at once anyway)
 - Generating playlist artwork from the preset options the official program offers (mainly gradients that the name is laid over)
-    - (todo) My program generates a playlist artwork from the tracks in it, and you can also set a custom one, same as the official program
+  - (todo) My program generates a playlist artwork from the tracks in it, and you can also set a custom one, same as the official program
+
+# Asset Credits
+
+App icon music note: https://thenounproject.com/icon/music-note-61776 https://commons.wikimedia.org/wiki/File:Music_Note_(61776)_-_The_Noun_Project.svg
