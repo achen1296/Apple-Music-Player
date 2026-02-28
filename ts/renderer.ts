@@ -46,19 +46,6 @@ async function switchTrack(trackID: string) {
     currentTrackAlbumText.innerText = album || "(no album)";
 }
 
-/*
-What exactly do shuffle and repeat do in Apple Music?
-- Obviously, when repeating only one song, shuffle is irrelevant.
-- When shuffle is toggled on, the entire current album/playlist (henceforth just called "the list") except for the song currently playing is shuffled into the queue, even tracks that are before the current one, and including as many copies of each track as were present in the list multiple times.
-    - If not repeating, playback stops after EVERY song in the list is played.
-    - If repeating, no song may repeat again until the entire list has been exhausted -- in other words, the list is sampled WITHOUT replacement until it is empty, and then it is refilled, rather than simply being sampled WITH replacement.
-- When shuffle is toggled off, the current song is located in the default order (its first occurrence if it is present more than once) and the position in the list is set there.
-    - If not repeating, playback stops after the LAST song in the list is played, even if playback was started in the middle of the list.
-    - If repeating, after the last song loops back to the first song.
-
-When repeating only one song, Apple Music changes the queue to display only that song many times. I decided I would rather still display the queue of other songs, making it easier to switch songs from the queue (e.g. if shuffle is on) without toggling the repeat mode.
-*/
-
 enum RepeatSetting {
     NONE,
     ALL,
