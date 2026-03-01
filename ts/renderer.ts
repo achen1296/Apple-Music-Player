@@ -114,7 +114,7 @@ const REPEAT_MARKER = Symbol();
 let trackQueue: (string | typeof REPEAT_MARKER)[] = [];
 let trackIndex = 0;
 
-function addTrackHistory(trackID: string | typeof REPEAT_MARKER) {
+async function addTrackHistory(trackID: string | typeof REPEAT_MARKER) {
     if (!trackID || trackID === REPEAT_MARKER) {
         return;
     }
@@ -122,12 +122,23 @@ function addTrackHistory(trackID: string | typeof REPEAT_MARKER) {
     if (trackHistory.length > 0 && trackHistory[trackHistory.length - 1][0] === trackID) {
         // same track, increment count
         trackHistory[trackHistory.length - 1][1]++;
+        const historyRepeatCount = trackHistory[trackHistory.length - 1][1];
+        const li = trackHistoryList.children[trackHistoryList.children.length - 1] as HTMLLIElement;
+        if (li.innerText.match(/ \(x\d+\)$/)) {
+            li.innerText = li.innerText.replace(/ \(x\d+\)$/, ` (x${historyRepeatCount})`);
+        } else {
+            li.innerText += ` (x${historyRepeatCount})`;
+        }
     } else {
         trackHistory.push([trackID, 1]);
+        const li = trackHistoryList.appendChild(document.createElement("li"));
+        const { name, album, artist } = await request.trackMeta(trackID);
+        li.innerText = `${name}${album ? ` from ${album}` : ""}${artist ? ` by ${artist}` : ""}`;
     }
 
     if (trackHistory.length > MAX_HISTORY) {
         trackHistory.splice(0, 1);
+        trackHistoryList.removeChild(trackHistoryList.children[0]);
     }
 }
 
@@ -136,7 +147,7 @@ async function switchTrack(trackID: string) {
         return; // e.g. undefined for empty track queue, silently ignore
     }
 
-    addTrackHistory(trackQueue[trackIndex]);
+    await addTrackHistory(trackQueue[trackIndex]);
 
     currentAudio.src = customSrc.trackFile(trackID);
 
