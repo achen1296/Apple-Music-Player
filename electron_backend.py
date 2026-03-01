@@ -13,7 +13,7 @@ LIBRARY = Library()  # todo give the user a way to specify a non-default path
 
 
 def flip_hex_endianness[T: str | bytes](hex: T) -> T:
-    assert len(hex) % 2 == 0
+    assert len(hex) % 2 == 0, hex
     if isinstance(hex, str):
         joiner = ""
     else:

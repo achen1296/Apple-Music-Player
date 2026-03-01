@@ -210,6 +210,7 @@ async function switchTrack(trackID: string) {
     if (trackIndex > MAX_BACKWARDS_QUEUE) {
         trackQueue.splice(0, trackIndex - MAX_BACKWARDS_QUEUE);
         trackIndex = MAX_BACKWARDS_QUEUE;
+        // no effect on the display since only removing ones already not shownf
     }
 
     currentAudio.src = customSrc.trackFile(trackID);
@@ -225,7 +226,11 @@ async function switchTrack(trackID: string) {
     refillTrackQueue();
 }
 
-function initializeShuffledQueue() {
+function initializeShuffledQueue(currentTrackID: string) {
+    // discard track queue except for the current one
+    trackQueue = [currentTrackID];
+    trackIndex = 0;
+
     // reset the sample
     trackSourceListShufflePopulation = [...trackSourceList];
     // except discard one copy of the current song
@@ -233,6 +238,9 @@ function initializeShuffledQueue() {
     if (i > 0) {
         trackSourceListShufflePopulation.splice(i, 1);
     }
+
+    trackQueueList.replaceChildren();
+    refillTrackQueue();
 }
 
 function enableShuffle() {
@@ -240,19 +248,26 @@ function enableShuffle() {
 
     shuffleButton.classList.add("topBarButtonActive");
 
-    // discard track queue except for the current song
-    trackQueue = [trackQueue[trackIndex]];
-    trackIndex = 0;
-
-    initializeShuffledQueue();
-    refillTrackQueue();
+    initializeShuffledQueue(trackQueue[trackIndex] as string);
 }
 
-function initializeUnshuffledQueue(startIndex: number) {
+function initializeUnshuffledQueue(currentTrackID: string) {
+    // locate first occurrence of the current track in the source list
+    let startIndex = trackSourceList.findIndex(t => t === currentTrackID);
+    if (startIndex === -1) {
+        startIndex = 0; // failsafe in case e.g. the song was removed from the playlist
+    }
+
     trackQueue = trackSourceList.slice(startIndex - MAX_BACKWARDS_QUEUE, startIndex); // fill in backwards queue
 
+    trackQueueList.replaceChildren();
+
+    // now playing
+    trackIndex = trackQueue.length;
+    trackQueue.push(currentTrackID);
+
     // fill in forwards queue
-    trackSourceListNext = startIndex;
+    trackSourceListNext = startIndex + 1;
     refillTrackQueue();
 }
 
@@ -261,12 +276,7 @@ function disableShuffle() {
 
     shuffleButton.classList.remove("topBarButtonActive");
 
-    // locate first occurrence of the current track in the source list
-    let i = trackSourceList.findIndex(t => t === trackQueue[trackIndex]);
-    if (i === -1) {
-        i = 0; // failsafe in case e.g. the song was removed from the playlist
-    }
-    initializeUnshuffledQueue(i);
+    initializeUnshuffledQueue(trackQueue[trackIndex] as string);
 }
 
 function toggleShuffle() {
@@ -281,21 +291,24 @@ function switchTrackSourceList(newTrackSourceList: string[], startIndex = 0) {
     trackSourceList = newTrackSourceList.filter(i => i); // remove empty strings from splitting e.g. "".split(" ") -> [""]
 
     if (shuffle) {
-        trackIndex = 0;
-        trackQueue = [trackSourceList[startIndex]];
-        initializeShuffledQueue();
+        initializeShuffledQueue(trackSourceList[startIndex]);
     } else {
-        initializeUnshuffledQueue(startIndex);
+        initializeUnshuffledQueue(trackSourceList[startIndex]);
     }
 
-    trackIndex = 0;
     while (trackQueue[trackIndex] === REPEAT_MARKER) {
         trackIndex++;
     }
-    switchTrack(trackQueue[0] as string);
+    switchTrack(trackQueue[trackIndex] as string);
 }
 
 async function previousTrack() {
+    if (trackQueue[trackIndex]) {
+        // put the track that was playing back onto the displayed queue
+        const li = trackQueueList.insertBefore(document.createElement("li"), trackQueueList.firstElementChild);
+        const trackMeta = await request.trackMeta(trackQueue[trackIndex] as string);
+        li.innerText = trackOneLineDescription(trackMeta);
+    }
     do {
         trackIndex--;
         // if somehow there are a bunch of REPEAT_MARKER entries at the start of the queue (which shouldn't happen, but just in case), will just stop with the undefined value at -1
@@ -303,11 +316,6 @@ async function previousTrack() {
     // clamp to -1, *not* to 0, so that skipping backwards at the start of the queue stops playback (which is how the official program does it, and also this is just less confusing than refusing to go backwards, although another alternative would be to disable the button; but see nextTrack)
     if (trackIndex < -1) {
         trackIndex = -1;
-    } else {
-        // put back onto the displayed queue
-        const li = trackQueueList.insertBefore(document.createElement("li"), trackQueueList.firstElementChild);
-        const trackMeta = await request.trackMeta(trackQueue[trackIndex] as string);
-        li.innerText = trackOneLineDescription(trackMeta);
     }
     switchTrack(trackQueue[trackIndex] as string);
 }
