@@ -17,7 +17,7 @@ Obviously, the reason why I wanted to make this alternative GUI at all is to add
 
 ## Different Features
 
-### Shuffle and Repeat
+### Track Queue/Shuffle and Repeat
 
 What exactly does shuffle do in Apple Music? I refer to both albums and playlists as just "the list" below.
 
@@ -27,6 +27,7 @@ When shuffling, the entire current album/playlist (henceforth just called "the l
 
 I have decided to make my program behave differently in the following ways:
 
+- In general, I implemented the track queue whatever way was simplest, so there are definitely subtle differences between my implementation and the official application's, but I also can't imagine anyone caring.
 - When repeating only one song, Apple Music changes the queue to display only that song many times. I decided I would rather still display the queue of other songs, making it easier to switch songs from the queue (e.g. if you want a random sample by having shuffle on) without toggling the repeat mode.
 
 ## Omitted Features

@@ -143,12 +143,16 @@ async function addTrackHistory(trackID: string | typeof REPEAT_MARKER) {
 }
 
 async function switchTrack(trackID: string) {
+    await addTrackHistory(trackQueue[trackIndex]);
+
     if (!trackID) {
-        // e.g. undefined for empty track queue or reaching the end of the queue
+        // e.g. undefined for out-of-bounds index, i.e. empty track queue, reaching the end, or skipping backwards beyond the start
+        currentAudio.src = "";
+        currentTrackNameText.innerText = "...";
+        currentTrackArtistText.innerText = "...";
+        currentTrackAlbumText.innerText = "...";
         return;
     }
-
-    await addTrackHistory(trackQueue[trackIndex]);
 
     currentAudio.src = customSrc.trackFile(trackID);
 
@@ -156,7 +160,7 @@ async function switchTrack(trackID: string) {
 
     const { name, album, artist } = await request.trackMeta(trackID);
 
-    currentTrackNameText.innerText = name;
+    currentTrackNameText.innerText = name || "(no name)";
     currentTrackArtistText.innerText = artist || "(no artist)";
     currentTrackAlbumText.innerText = album || "(no album)";
 }
@@ -174,15 +178,23 @@ function switchTrackQueue(newTrackQueue: string[]) {
 function previousTrack() {
     do {
         trackIndex--;
-        // should never have a queue full of REPEAT_MARKER only...
+        // if somehow there are a bunch of REPEAT_MARKER entries at the start of the queue (which shouldn't happen, but just in case), will just stop with the undefined value at -1
     } while (trackQueue[trackIndex] === REPEAT_MARKER);
+    // clamp to -1, *not* to 0, so that skipping backwards at the start of the queue stops playback (which is how the official program does it, and also this is just less confusing than refusing to go backwards, although another alternative would be to disable the button; but see nextTrack)
+    if (trackIndex < -1) {
+        trackIndex = -1;
+    }
     switchTrack(trackQueue[trackIndex] as string);
 }
 
 function nextTrack() {
+    // likewise with previousTrack, except that falling off the end in this direction can be caused by regular playback reaching the end of the queue, and in that case it makes more sense to just stop playing
     do {
         trackIndex++;
     } while (trackQueue[trackIndex] === REPEAT_MARKER);
+    if (trackIndex >= trackQueue.length) {
+        trackIndex = trackQueue.length;
+    }
     switchTrack(trackQueue[trackIndex] as string);
 }
 
