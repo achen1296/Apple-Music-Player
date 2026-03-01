@@ -185,6 +185,7 @@ async function refillTrackQueue() {
             if (trackSourceListNext >= trackSourceList.length) {
                 if (repeat === RepeatSetting.ALL) {
                     trackSourceListNext = 0;
+                    await pushQueue(REPEAT_MARKER);
                 } else {
                     break;
                 }
@@ -223,10 +224,10 @@ async function switchTrack(trackID: string) {
     currentTrackArtistText.innerText = artist || "(no artist)";
     currentTrackAlbumText.innerText = album || "(no album)";
 
-    refillTrackQueue();
+    await refillTrackQueue();
 }
 
-function initializeShuffledQueue(currentTrackID: string) {
+async function initializeShuffledQueue(currentTrackID: string) {
     // discard track queue except for the current one
     trackQueue = [currentTrackID];
     trackIndex = 0;
@@ -240,7 +241,7 @@ function initializeShuffledQueue(currentTrackID: string) {
     }
 
     trackQueueList.replaceChildren();
-    refillTrackQueue();
+    await refillTrackQueue();
 }
 
 function enableShuffle() {
@@ -251,7 +252,7 @@ function enableShuffle() {
     initializeShuffledQueue(trackQueue[trackIndex] as string);
 }
 
-function initializeUnshuffledQueue(currentTrackID: string) {
+async function initializeUnshuffledQueue(currentTrackID: string) {
     // locate first occurrence of the current track in the source list
     let startIndex = trackSourceList.findIndex(t => t === currentTrackID);
     if (startIndex === -1) {
@@ -268,7 +269,7 @@ function initializeUnshuffledQueue(currentTrackID: string) {
 
     // fill in forwards queue
     trackSourceListNext = startIndex + 1;
-    refillTrackQueue();
+    await refillTrackQueue();
 }
 
 function disableShuffle() {
@@ -337,22 +338,40 @@ function nextTrack() {
     switchTrack(trackQueue[trackIndex] as string);
 }
 
+function discardRepeats() {
+    if (shuffle) {
+        // reset
+        trackSourceListShufflePopulation = [...trackSourceList];
+    }
+
+    // search forward for REPEAT_MARKER and discard starting from there
+    // (not backward)
+    const i = trackQueue.findIndex(t => t === REPEAT_MARKER);
+    if (i >= 0) {
+        trackQueue.splice(i);
+        trackQueueList.replaceChildren(...Array.from(trackQueueList.children).slice(0, i - trackIndex - 1));
+    }
+}
+
 shuffleButton.addEventListener("click", ev => toggleShuffle());
 
-repeatButton.addEventListener("click", ev => {
+repeatButton.addEventListener("click", async ev => {
     switch (repeat) {
         case RepeatSetting.NONE:
             repeat = RepeatSetting.ALL;
             repeatButton.classList.add("topBarButtonActive");
+            await refillTrackQueue();
             break;
         case RepeatSetting.ALL:
             repeat = RepeatSetting.ONE;
             repeatButton.innerText = "🔂";
+            // only "ended" event is affected by this, nothing to do do here
             break;
         case RepeatSetting.ONE:
             repeat = RepeatSetting.NONE;
             repeatButton.innerText = "🔁";
             repeatButton.classList.remove("topBarButtonActive");
+            discardRepeats();
             break;
     }
 });
