@@ -144,7 +144,8 @@ async function addTrackHistory(trackID: string | typeof REPEAT_MARKER) {
 
 async function switchTrack(trackID: string) {
     if (!trackID) {
-        return; // e.g. undefined for empty track queue, silently ignore
+        // e.g. undefined for empty track queue or reaching the end of the queue
+        return;
     }
 
     await addTrackHistory(trackQueue[trackIndex]);
@@ -173,7 +174,6 @@ function switchTrackQueue(newTrackQueue: string[]) {
 function previousTrack() {
     do {
         trackIndex--;
-        trackIndex %= trackQueue.length;
         // should never have a queue full of REPEAT_MARKER only...
     } while (trackQueue[trackIndex] === REPEAT_MARKER);
     switchTrack(trackQueue[trackIndex] as string);
@@ -182,7 +182,6 @@ function previousTrack() {
 function nextTrack() {
     do {
         trackIndex++;
-        trackIndex %= trackQueue.length;
     } while (trackQueue[trackIndex] === REPEAT_MARKER);
     switchTrack(trackQueue[trackIndex] as string);
 }
