@@ -93,12 +93,16 @@ const trackHistory: [string, number][] = [];
 let trackNowPlaying: string | null = null;
 
 /** Current album or playlist -- all tracks in order */
-const trackSourceList: string[] = [];
-/** Used to sample from when shuffling */
-let trackSourceListShuffleSample: string[] = [];
+let trackSourceList: string[] = [];
+/** Used to sample from when shuffling, hence "population" as in random sampling terminology */
+let trackSourceListShufflePopulation: string[] = [];
+/** Position in `trackSourceList` to pull next for `trackQueue`. Can't directly use `trackSourceList` in case the user wants to manually add tracks to play next. */
+let trackSourceListNext = 0;
 
-/** Maximum length of trackQueue to calculate and display in advance (not including `REPEAT_MARKER`). */
-const MAX_QUEUE = 20;
+/** Maximum length of `trackQueue` to remember before `trackIndex`. Can be larger because it's not shown anywhere on the GUI. */
+const MAX_BACKWARDS_QUEUE = 100;
+/** Maximum length of `trackQueue` to calculate and display in advance, not including `REPEAT_MARKER`, and not including elements before `trackIndex`. (The user may manually add more tracks up next than this and they won't be actively discarded. The forward queue can also grow by skipping backwards a lot.) */
+const MAX_FORWARD_QUEUE = 20;
 const REPEAT_MARKER = Symbol();
 /**
  * Before `trackIndex`: tracks that will play when skipping backwards
@@ -113,6 +117,10 @@ const REPEAT_MARKER = Symbol();
  * */
 let trackQueue: (string | typeof REPEAT_MARKER)[] = [];
 let trackIndex = 0;
+
+function trackOneLineDescription({ name, album, artist }: { name: string, album: string, artist: string }): string {
+    return `${name}${album ? ` from ${album}` : ""}${artist ? ` by ${artist}` : ""}`;
+}
 
 async function addTrackHistory(trackID: string | typeof REPEAT_MARKER) {
     if (!trackID || trackID === REPEAT_MARKER) {
@@ -132,19 +140,62 @@ async function addTrackHistory(trackID: string | typeof REPEAT_MARKER) {
     } else {
         trackHistory.push([trackID, 1]);
         const li = trackHistoryList.appendChild(document.createElement("li"));
-        const { name, album, artist } = await request.trackMeta(trackID);
-        li.innerText = `${name}${album ? ` from ${album}` : ""}${artist ? ` by ${artist}` : ""}`;
+        const trackMeta = await request.trackMeta(trackID);
+        li.innerText = trackOneLineDescription(trackMeta);
     }
 
     if (trackHistory.length > MAX_HISTORY) {
         trackHistory.splice(0, 1);
-        trackHistoryList.removeChild(trackHistoryList.children[0]);
+        if (trackHistoryList.firstElementChild) {
+            trackHistoryList.removeChild(trackHistoryList.firstElementChild);
+        }
+    }
+}
+
+async function refillTrackQueue() {
+    async function pushQueue(trackID: string | typeof REPEAT_MARKER) {
+        trackQueue.push(trackID);
+        if (trackID === REPEAT_MARKER) {
+            return;
+        }
+
+        const li = trackQueueList.appendChild(document.createElement("li"));
+        const trackMeta = await request.trackMeta(trackID);
+        li.innerText = trackOneLineDescription(trackMeta);
+    }
+
+    if (shuffle) {
+        // random sample without replacement until empty
+        // todo don't count REPEAT_MARKER
+        while (trackQueue.length < trackIndex + MAX_FORWARD_QUEUE) {
+            if (trackSourceListShufflePopulation.length === 0) {
+                if (repeat === RepeatSetting.ALL) {
+                    // refill
+                    trackSourceListShufflePopulation = [...trackSourceList];
+                    await pushQueue(REPEAT_MARKER);
+                } else {
+                    break;
+                }
+            }
+            const i = Math.floor(Math.random() * trackSourceListShufflePopulation.length);
+            await pushQueue(trackSourceListShufflePopulation.splice(i, 1)[0]);
+        }
+    } else {
+        while (trackQueue.length < trackIndex + MAX_FORWARD_QUEUE) {
+            if (trackSourceListNext >= trackSourceList.length) {
+                if (repeat === RepeatSetting.ALL) {
+                    trackSourceListNext = 0;
+                } else {
+                    break;
+                }
+            }
+            await pushQueue(trackSourceList[trackSourceListNext]);
+            trackSourceListNext++;
+        }
     }
 }
 
 async function switchTrack(trackID: string) {
-    await addTrackHistory(trackQueue[trackIndex]);
-
     if (!trackID) {
         // e.g. undefined for out-of-bounds index, i.e. empty track queue, reaching the end, or skipping backwards beyond the start
         currentAudio.src = "";
@@ -152,6 +203,13 @@ async function switchTrack(trackID: string) {
         currentTrackArtistText.innerText = "...";
         currentTrackAlbumText.innerText = "...";
         return;
+    }
+
+    await addTrackHistory(trackQueue[trackIndex]);
+
+    if (trackIndex > MAX_BACKWARDS_QUEUE) {
+        trackQueue.splice(0, trackIndex - MAX_BACKWARDS_QUEUE);
+        trackIndex = MAX_BACKWARDS_QUEUE;
     }
 
     currentAudio.src = customSrc.trackFile(trackID);
@@ -163,19 +221,81 @@ async function switchTrack(trackID: string) {
     currentTrackNameText.innerText = name || "(no name)";
     currentTrackArtistText.innerText = artist || "(no artist)";
     currentTrackAlbumText.innerText = album || "(no album)";
+
+    refillTrackQueue();
 }
 
-function switchTrackQueue(newTrackQueue: string[]) {
-    trackQueue = newTrackQueue.filter(i => i); // remove empty strings from splitting e.g. "".split(" ") -> [""]
+function initializeShuffledQueue() {
+    // reset the sample
+    trackSourceListShufflePopulation = [...trackSourceList];
+    // except discard one copy of the current song
+    const i = trackSourceListShufflePopulation.findIndex(t => t === trackQueue[trackIndex]);
+    if (i > 0) {
+        trackSourceListShufflePopulation.splice(i, 1);
+    }
+}
+
+function enableShuffle() {
+    shuffle = true;
+
+    shuffleButton.classList.add("topBarButtonActive");
+
+    // discard track queue except for the current song
+    trackQueue = [trackQueue[trackIndex]];
     trackIndex = 0;
-    // REPEAT_MARKER shouldn't be first, but just in case...
+
+    initializeShuffledQueue();
+    refillTrackQueue();
+}
+
+function initializeUnshuffledQueue(startIndex: number) {
+    trackQueue = trackSourceList.slice(startIndex - MAX_BACKWARDS_QUEUE, startIndex); // fill in backwards queue
+
+    // fill in forwards queue
+    trackSourceListNext = startIndex;
+    refillTrackQueue();
+}
+
+function disableShuffle() {
+    shuffle = false;
+
+    shuffleButton.classList.remove("topBarButtonActive");
+
+    // locate first occurrence of the current track in the source list
+    let i = trackSourceList.findIndex(t => t === trackQueue[trackIndex]);
+    if (i === -1) {
+        i = 0; // failsafe in case e.g. the song was removed from the playlist
+    }
+    initializeUnshuffledQueue(i);
+}
+
+function toggleShuffle() {
+    if (shuffle) {
+        disableShuffle();
+    } else {
+        enableShuffle();
+    }
+}
+
+function switchTrackSourceList(newTrackSourceList: string[], startIndex = 0) {
+    trackSourceList = newTrackSourceList.filter(i => i); // remove empty strings from splitting e.g. "".split(" ") -> [""]
+
+    if (shuffle) {
+        trackIndex = 0;
+        trackQueue = [trackSourceList[startIndex]];
+        initializeShuffledQueue();
+    } else {
+        initializeUnshuffledQueue(startIndex);
+    }
+
+    trackIndex = 0;
     while (trackQueue[trackIndex] === REPEAT_MARKER) {
         trackIndex++;
     }
     switchTrack(trackQueue[0] as string);
 }
 
-function previousTrack() {
+async function previousTrack() {
     do {
         trackIndex--;
         // if somehow there are a bunch of REPEAT_MARKER entries at the start of the queue (which shouldn't happen, but just in case), will just stop with the undefined value at -1
@@ -183,6 +303,11 @@ function previousTrack() {
     // clamp to -1, *not* to 0, so that skipping backwards at the start of the queue stops playback (which is how the official program does it, and also this is just less confusing than refusing to go backwards, although another alternative would be to disable the button; but see nextTrack)
     if (trackIndex < -1) {
         trackIndex = -1;
+    } else {
+        // put back onto the displayed queue
+        const li = trackQueueList.insertBefore(document.createElement("li"), trackQueueList.firstElementChild);
+        const trackMeta = await request.trackMeta(trackQueue[trackIndex] as string);
+        li.innerText = trackOneLineDescription(trackMeta);
     }
     switchTrack(trackQueue[trackIndex] as string);
 }
@@ -194,19 +319,17 @@ function nextTrack() {
     } while (trackQueue[trackIndex] === REPEAT_MARKER);
     if (trackIndex >= trackQueue.length) {
         trackIndex = trackQueue.length;
+    } else {
+        // remove from displayed queue
+        if (trackQueueList.firstElementChild) {
+            trackQueueList.removeChild(trackQueueList.firstElementChild);
+        }
     }
+
     switchTrack(trackQueue[trackIndex] as string);
 }
 
-shuffleButton.addEventListener("click", ev => {
-    if (shuffle) {
-        shuffle = false;
-        shuffleButton.classList.remove("topBarButtonActive");
-    } else {
-        shuffle = true;
-        shuffleButton.classList.add("topBarButtonActive");
-    }
-});
+shuffleButton.addEventListener("click", ev => toggleShuffle());
 
 repeatButton.addEventListener("click", ev => {
     switch (repeat) {
@@ -277,16 +400,18 @@ currentAudio.addEventListener("durationchange", ev => {
     playTimeSlider.max = `${currentAudio.duration}`;
 });
 
-skipPreviousButton.addEventListener("click", ev => {
-    previousTrack();
-});
+skipPreviousButton.addEventListener("click", ev => previousTrack());
 
-skipNextButton.addEventListener("click", ev => {
-    nextTrack();
-});
+// todo increment skip count
+skipNextButton.addEventListener("click", ev => nextTrack());
 
 currentAudio.addEventListener("ended", ev => {
-    nextTrack();
+    // todo increment play count
+    if (repeat === RepeatSetting.ONE) {
+        currentAudio.play(); // restart playback
+    } else {
+        nextTrack();
+    }
 });
 
 playPauseButton.addEventListener("click", ev => {
@@ -331,7 +456,7 @@ async function loadAlbumList() {
         const { name, artist } = await request.albumMeta(albumID);
         a.innerText = `${name}${artist ? ` by ${artist}` : ""}`;
         a.addEventListener("click", async ev => {
-            switchTrackQueue(await request.albumItems(albumID));
+            switchTrackSourceList(await request.albumItems(albumID));
         });
     }
 }
@@ -351,7 +476,7 @@ async function loadPlaylistList() {
         const { name } = await request.playlistMeta(playlistID);
         a.innerText = name;
         a.addEventListener("click", async ev => {
-            switchTrackQueue(await request.playlistItems(playlistID));
+            switchTrackSourceList(await request.playlistItems(playlistID));
         });
     }
 }

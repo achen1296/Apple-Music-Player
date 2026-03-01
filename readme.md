@@ -12,7 +12,7 @@ Obviously, the reason why I wanted to make this alternative GUI at all is to add
 
 - (todo) It is much faster to change a song's playlist memberships, especially multiple, with a different UI for this — just click on the checkbox.
 - (todo) I will call this one "Semi-smart Playlists": Smart playlists where you can manually add additional tracks not meeting the smart criteria, and also manually remove tracks that do meet the criteria. Thus "semi-smart" because they are both smart and manually changed like normal playlists. (Internally, to maintain partial compatibility with the official program, this is implemented by adding a new playlist for the manual additions, another for the manual removals, moving all of them into a folder for organization, and then changing the smart playlist conditions to be: (<\original conditions\> OR track is in manual additions) AND track is not in manual removals]. You could of course do this directly in the official program, mine just makes it easier.)
-- Being able to control the playback rate (which is conveniently something a web app can do natively).
+- Being able to control the playback speed (which is conveniently another thing a web app can do natively).
 - (todo) Being able to pitch shift.
 
 ## Different Features
@@ -28,7 +28,8 @@ When shuffling, the entire current album/playlist (henceforth just called "the l
 I have decided to make my program behave differently in the following ways:
 
 - In general, I implemented the track queue whatever way was simplest, so there are definitely subtle differences between my implementation and the official application's, but I also can't imagine anyone caring.
-- When repeating only one song, Apple Music changes the queue to display only that song many times. I decided I would rather still display the queue of other songs, making it easier to switch songs from the queue (e.g. if you want a random sample by having shuffle on) without toggling the repeat mode.
+- When repeating only one song, both skip buttons will just jump to the beginning in the official program. In my program, they will switch songs as normal. The repeat setting only affects the song ending naturally by playing.
+- To complement this: When repeating only one song, Apple Music changes the queue to display only that song many times. I decided I would rather still display the queue of other songs, making it easier to switch songs from the queue (e.g. if you want a random sample by having shuffle on) without toggling the repeat mode.
 
 ## Omitted Features
 
