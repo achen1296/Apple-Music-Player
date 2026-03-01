@@ -38,7 +38,7 @@ let childProcess: ChildProcess | null = null;
 
 function spawnBackend() {
     if (childProcess) {
-        return
+        return;
     }
     childProcess = spawn(
         "python",

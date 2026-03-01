@@ -152,6 +152,19 @@ async function addTrackHistory(trackID: string | typeof REPEAT_MARKER) {
     }
 }
 
+function queueLengthNoRepeatMarker(start = 0, end?: number) {
+    if (end === undefined) {
+        end = trackQueue.length;
+    }
+    let markerCount = 0;
+    for (let i = start; i < end; i++) {
+        if (trackQueue[i] === REPEAT_MARKER) {
+            markerCount++;
+        }
+    }
+    return end - start - markerCount;
+}
+
 async function refillTrackQueue() {
     async function pushQueue(trackID: string | typeof REPEAT_MARKER) {
         trackQueue.push(trackID);
@@ -162,12 +175,27 @@ async function refillTrackQueue() {
         const li = trackQueueList.appendChild(document.createElement("li"));
         const trackMeta = await request.trackMeta(trackID);
         li.innerText = trackOneLineDescription(trackMeta);
+        li.addEventListener("click", ev => {
+            while (trackQueueList.firstElementChild && trackQueueList.firstElementChild !== li) {
+                while (trackQueue[trackIndex] === REPEAT_MARKER) {
+                    trackIndex++;
+                }
+                trackIndex++;
+                trackQueueList.removeChild(trackQueueList.firstElementChild);
+            }
+            // once more to actually reach the li that was clicked
+            while (trackQueue[trackIndex] === REPEAT_MARKER) {
+                trackIndex++;
+            }
+            trackIndex++;
+            trackQueueList.removeChild(li);
+            switchTrack(trackQueue[trackIndex] as string);
+        });
     }
 
     if (shuffle) {
         // random sample without replacement until empty
-        // todo don't count REPEAT_MARKER
-        while (trackQueue.length < trackIndex + MAX_FORWARD_QUEUE) {
+        while (queueLengthNoRepeatMarker(trackIndex + 1) < MAX_FORWARD_QUEUE) {
             if (trackSourceListShufflePopulation.length === 0) {
                 if (repeat === RepeatSetting.ALL) {
                     // refill
@@ -181,7 +209,7 @@ async function refillTrackQueue() {
             await pushQueue(trackSourceListShufflePopulation.splice(i, 1)[0]);
         }
     } else {
-        while (trackQueue.length < trackIndex + MAX_FORWARD_QUEUE) {
+        while (queueLengthNoRepeatMarker(trackIndex + 1) < MAX_FORWARD_QUEUE) {
             if (trackSourceListNext >= trackSourceList.length) {
                 if (repeat === RepeatSetting.ALL) {
                     trackSourceListNext = 0;
