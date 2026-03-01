@@ -2,6 +2,52 @@
 
 declare function backendRequest(url: string): Promise<string>;
 
+const request = {
+    albumList: async function () {
+        return (await backendRequest("app://albumlist")).split(" ");
+    },
+    artistList: async function () {
+        return (await backendRequest("app://artistlist")).split(" ");
+    },
+    trackList: async function () {
+        return (await backendRequest("app://tracklist")).split(" ");
+    },
+    playlistList: async function () {
+        return (await backendRequest("app://playlistlist")).split(" ");
+    },
+    albumMeta: async function (albumID: string): Promise<
+        { name: string, artist: string }
+    > {
+        return JSON.parse(await backendRequest(`app://albummeta/${albumID}`));
+    },
+    artistMeta: async function (artistID: string): Promise<
+        { name: string }
+    > {
+        return JSON.parse(await backendRequest(`app://artistmeta/${artistID}`));
+    },
+    trackMeta: async function (trackID: string): Promise<
+        { name: string, album: string, artist: string }
+    > {
+        return JSON.parse(await backendRequest(`app://trackmeta/${trackID}`));
+    },
+    playlistMeta: async function (playlistID: string): Promise<
+        { name: string }
+    > {
+        return JSON.parse(await backendRequest(`app://playlistmeta/${playlistID}`));
+    },
+    albumItems: async function (albumID: string) {
+        return (await backendRequest(`app://albumitems/${albumID}`)).split(" ");
+    },
+    playlistItems: async function (playlistID: string) {
+        return (await backendRequest(`app://playlistitems/${playlistID}`)).split(" ");
+    },
+};
+
+const customSrc = {
+    trackFile: (trackID: string) => `app://trackfile/${trackID}`,
+    artwork: (artworkID: string) => `app://artwork/${artworkID}`,
+};
+
 // player
 
 const playerDiv = document.getElementById("player") as HTMLDivElement;
@@ -30,28 +76,116 @@ const playRateText = document.getElementById("playRateText") as HTMLSpanElement;
 const trackHistoryList = document.getElementById("trackHistory") as HTMLUListElement;
 const trackQueueList = document.getElementById("trackQueue") as HTMLUListElement;
 
-async function switchTrack(trackID: string) {
-    if (!trackID) {
-        return; // e.g. undefined for empty track queue, silently ignore
-    }
-    currentAudio.src = `app://trackfile/${trackID}`;
-
-    currentAudio.playbackRate = Number(playRateSlider.value); // this isn't remembered automatically (unlike volume)
-
-    const trackMeta = JSON.parse(await backendRequest(`app://trackmeta/${trackID}`));
-    const { name, album, artist } = trackMeta;
-
-    currentTrackNameText.innerText = name;
-    currentTrackArtistText.innerText = artist || "(no artist)";
-    currentTrackAlbumText.innerText = album || "(no album)";
-}
-
 enum RepeatSetting {
     NONE,
     ALL,
     ONE,
 };
 let repeat = RepeatSetting.NONE;
+
+let shuffle = false;
+
+/** Maximum length of trackHistory to keep. Actually, I store a count as well as the ID so that repeating the same song many times doesn't fill up the history. */
+const MAX_HISTORY = 50;
+const trackHistory: [string, number][] = [];
+
+/** `null` if nothing is playing */
+let trackNowPlaying: string | null = null;
+
+/** Current album or playlist -- all tracks in order */
+const trackSourceList: string[] = [];
+/** Used to sample from when shuffling */
+let trackSourceListShuffleSample: string[] = [];
+
+/** Maximum length of trackQueue to calculate and display in advance (not including `REPEAT_MARKER`). */
+const MAX_QUEUE = 20;
+const REPEAT_MARKER = Symbol();
+/**
+ * Before `trackIndex`: tracks that will play when skipping backwards
+ *
+ * At `trackIndex`: playing now
+ *
+ * After `trackIndex`: up next
+ *
+ * Note that skipping backwards does not use the play history -- for example, when starting playback in the middle of a list that is not shuffled. Also, tracks may be added by the user to play next, so they may not necessarily be part of the `trackSourceList`.
+ *
+ * The symbol `REPEAT_MARKER` is used to mark the point where a repeat of all tracks occurred. Therefore, if repeat is turned off, everything after the first appearance of `REPEAT_MARKER` is discarded from the queue.
+ * */
+let trackQueue: (string | typeof REPEAT_MARKER)[] = [];
+let trackIndex = 0;
+
+function addTrackHistory(trackID: string | typeof REPEAT_MARKER) {
+    if (!trackID || trackID === REPEAT_MARKER) {
+        return;
+    }
+
+    if (trackHistory.length > 0 && trackHistory[trackHistory.length - 1][0] === trackID) {
+        // same track, increment count
+        trackHistory[trackHistory.length - 1][1]++;
+    } else {
+        trackHistory.push([trackID, 1]);
+    }
+
+    if (trackHistory.length > MAX_HISTORY) {
+        trackHistory.splice(0, 1);
+    }
+}
+
+async function switchTrack(trackID: string) {
+    if (!trackID) {
+        return; // e.g. undefined for empty track queue, silently ignore
+    }
+
+    addTrackHistory(trackQueue[trackIndex]);
+
+    currentAudio.src = customSrc.trackFile(trackID);
+
+    currentAudio.playbackRate = Number(playRateSlider.value); // this isn't remembered automatically (unlike volume)
+
+    const { name, album, artist } = await request.trackMeta(trackID);
+
+    currentTrackNameText.innerText = name;
+    currentTrackArtistText.innerText = artist || "(no artist)";
+    currentTrackAlbumText.innerText = album || "(no album)";
+}
+
+function switchTrackQueue(newTrackQueue: string[]) {
+    trackQueue = newTrackQueue.filter(i => i); // remove empty strings from splitting e.g. "".split(" ") -> [""]
+    trackIndex = 0;
+    // REPEAT_MARKER shouldn't be first, but just in case...
+    while (trackQueue[trackIndex] === REPEAT_MARKER) {
+        trackIndex++;
+    }
+    switchTrack(trackQueue[0] as string);
+}
+
+function previousTrack() {
+    do {
+        trackIndex--;
+        trackIndex %= trackQueue.length;
+        // should never have a queue full of REPEAT_MARKER only...
+    } while (trackQueue[trackIndex] === REPEAT_MARKER);
+    switchTrack(trackQueue[trackIndex] as string);
+}
+
+function nextTrack() {
+    do {
+        trackIndex++;
+        trackIndex %= trackQueue.length;
+    } while (trackQueue[trackIndex] === REPEAT_MARKER);
+    switchTrack(trackQueue[trackIndex] as string);
+}
+
+shuffleButton.addEventListener("click", ev => {
+    if (shuffle) {
+        shuffle = false;
+        shuffleButton.classList.remove("topBarButtonActive");
+    } else {
+        shuffle = true;
+        shuffleButton.classList.add("topBarButtonActive");
+    }
+});
+
 repeatButton.addEventListener("click", ev => {
     switch (repeat) {
         case RepeatSetting.NONE:
@@ -69,54 +203,6 @@ repeatButton.addEventListener("click", ev => {
             break;
     }
 });
-
-let shuffle = false;
-shuffleButton.addEventListener("click", ev => {
-    if (shuffle) {
-        shuffle = false;
-        shuffleButton.classList.remove("topBarButtonActive");
-    } else {
-        shuffle = true;
-        shuffleButton.classList.add("topBarButtonActive");
-    }
-});
-
-/** Maximum length of trackHistory to keep. Actually, I store a count as well as the ID so that repeating the same song many times doesn't fill up the history. */
-const MAX_HISTORY = 50;
-const trackHistory: [string, number][] = [];
-
-/** `null` if nothing is playing */
-let trackNowPlaying: string | null = null;
-
-/** Current album or playlist -- all tracks in order */
-const trackSourceList: string[] = [];
-/** Used to sample from when shuffling */
-let trackSourceListShuffleSample: string[] = [];
-
-/** Maximum length of trackQueue to calculate and display in advance (not including `REPEAT_MARKER`). */
-const MAX_QUEUE = 20;
-const REPEAT_MARKER = Symbol();
-/** Tracks that are going to play next. The symbol `REPEAT_MARKER` is used to mark the point where a repeat of all tracks occurred. Therefore, if repeat is turned off, everything after the first appearance of `REPEAT_MARKER` is discarded from the queue. */
-let trackQueue: (string | typeof REPEAT_MARKER)[] = [];
-let trackIndex = 0;
-
-function switchTrackQueue(newTrackQueue: string[]) {
-    trackQueue = newTrackQueue.filter(i => i); // remove empty strings from splitting e.g. "".split(" ") -> [""]
-    trackIndex = 0;
-    switchTrack(trackQueue[0]);
-}
-
-function previousTrack() {
-    trackIndex--;
-    trackIndex %= trackQueue.length;
-    switchTrack(trackQueue[trackIndex]);
-}
-
-function nextTrack() {
-    trackIndex++;
-    trackIndex %= trackQueue.length;
-    switchTrack(trackQueue[trackIndex]);
-}
 
 const SECONDS_FORMAT = Intl.NumberFormat(undefined, {
     minimumIntegerDigits: 2
@@ -211,20 +297,19 @@ const playlistList = document.getElementById("playlistList") as HTMLUListElement
 
 
 async function loadAlbumList() {
-    const albumIDs = await backendRequest("app://albumlist");
+    const albumIDs = await request.albumList();
     if (albumList.firstElementChild) {
         // remove "Loading..."
         albumList.removeChild(albumList.firstElementChild);
     }
-    for (const albumID of albumIDs.split(" ")) {
+    for (const albumID of albumIDs) {
         const a = albumList
             .appendChild(document.createElement("li"))
             .appendChild(document.createElement("a"));
-        const albumMeta = JSON.parse(await backendRequest(`app://albummeta/${albumID}`));
-        const { name, artist } = albumMeta;
+        const { name, artist } = await request.albumMeta(albumID);
         a.innerText = `${name}${artist ? ` by ${artist}` : ""}`;
         a.addEventListener("click", async ev => {
-            switchTrackQueue((await backendRequest(`app://albumitems/${albumID}`)).split(" "));
+            switchTrackQueue(await request.albumItems(albumID));
         });
     }
 }
@@ -232,19 +317,19 @@ async function loadAlbumList() {
 loadAlbumList();
 
 async function loadPlaylistList() {
-    const playlistIDs = await backendRequest("app://playlistlist");
+    const playlistIDs = await request.playlistList();
     if (playlistList.firstElementChild) {
         // remove "Loading..."
         playlistList.removeChild(playlistList.firstElementChild);
     }
-    for (const playlistID of playlistIDs.split(" ")) {
+    for (const playlistID of playlistIDs) {
         const a = playlistList
             .appendChild(document.createElement("li"))
             .appendChild(document.createElement("a"));
-        const playlistMeta = JSON.parse(await backendRequest(`app://playlistmeta/${playlistID}`));
-        a.innerText = playlistMeta["name"];
+        const { name } = await request.playlistMeta(playlistID);
+        a.innerText = name;
         a.addEventListener("click", async ev => {
-            switchTrackQueue((await backendRequest(`app://playlistitems/${playlistID}`)).split(" "));
+            switchTrackQueue(await request.playlistItems(playlistID));
         });
     }
 }
