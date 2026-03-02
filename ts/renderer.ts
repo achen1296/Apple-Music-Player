@@ -142,6 +142,12 @@ async function addTrackHistory(trackID: string | typeof REPEAT_MARKER) {
         const li = trackHistoryList.appendChild(document.createElement("li"));
         const trackMeta = await request.trackMeta(trackID);
         li.innerText = trackOneLineDescription(trackMeta);
+        // start playing the track clicked but continue the same queue after
+        li.addEventListener("click", ev => {
+            trackIndex++;
+            trackQueue.splice(trackIndex, 0, trackID);
+            switchTrack(trackQueue[trackIndex] as string);
+        });
     }
 
     if (trackHistory.length > MAX_HISTORY) {
@@ -175,6 +181,7 @@ async function refillTrackQueue() {
         const li = trackQueueList.appendChild(document.createElement("li"));
         const trackMeta = await request.trackMeta(trackID);
         li.innerText = trackOneLineDescription(trackMeta);
+        // jump ahead to the item that was clicked
         li.addEventListener("click", ev => {
             while (trackQueueList.firstElementChild && trackQueueList.firstElementChild !== li) {
                 while (trackQueue[trackIndex] === REPEAT_MARKER) {
