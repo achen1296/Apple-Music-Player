@@ -20,7 +20,7 @@ def flip_hex_endianness[T: str | bytes](hex: T) -> T:
         joiner = b""
     return joiner.join(hex[i-2:i] for i in range(len(hex), 0, -2))  # type: ignore
 
-# everything would work fine as long as we are consistent about flipping/not flipping hex endianness in both of the below functions, however it's less confusing if the hex is every printed out anywhere to compare it with the documentation and other Python code where the hex might be shown, which is worth a small runtime cost
+# everything would work fine as long as we are consistent about flipping/not flipping hex endianness in both of the below functions, however it's less confusing if the hex is ever printed out anywhere to compare it with the documentation and other Python code where the hex might be shown, which is worth a small runtime cost
 
 
 def hex_to_id(hex: str | bytes):

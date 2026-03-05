@@ -4,6 +4,10 @@ See also the readme for the Apple-Music-Editor repo, which this one uses as a su
 
 I had already written the editor backend in Python (as my go-to language) when I decided to create an alternative player GUI. While researching GUI options, the automatic and simple-to-implement audio support offered by Chromium via Electron was appealing. Add on that I have been wanting to learn more about HTML/CSS/JavaScript development and it seemed like a good choice. It's also good that this will hopefully make it cross-platform.
 
+# Library File Correctness
+
+As stated in the Apple-Music-Editor readme (in case you didn't read it), it may not be 100% correct and accurate yet. (todo) That code is set to make backups on every save; the player backend reduces that down to once a day + delete files older than 30 days except for one each month (up to you to manually delete these if you don't need them, but this shouldn't fill your storage very fast because even big libraries are only in the ~10 MB range). To verify that everything is still correct, open the official program once in a while and make sure your library still loads. With such generous automatic backups, it is not my fault if you end up without a valid copy of your library.
+
 # Feature Differences Compared to Official Apple Music Player
 
 Obviously, the reason why I wanted to make this alternative GUI at all is to add/change features and use it myself.
