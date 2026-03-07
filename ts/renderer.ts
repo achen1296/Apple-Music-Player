@@ -73,8 +73,11 @@ const volumeText = document.getElementById("volumeText") as HTMLSpanElement;
 const playRateSlider = document.getElementById("playRateSlider") as HTMLInputElement;
 const playRateText = document.getElementById("playRateText") as HTMLSpanElement;
 
-const trackHistoryList = document.getElementById("trackHistory") as HTMLUListElement;
-const trackQueueList = document.getElementById("trackQueue") as HTMLUListElement;
+const historyTabButton = document.getElementById("historyTabButton") as HTMLButtonElement;
+const queueTabButton = document.getElementById("queueTabButton") as HTMLButtonElement;
+
+const trackHistoryList = document.getElementById("trackHistoryList") as HTMLUListElement;
+const trackQueueList = document.getElementById("trackQueueList") as HTMLUListElement;
 
 enum RepeatSetting {
     NONE,
@@ -231,6 +234,20 @@ async function refillTrackQueue() {
     }
 }
 
+historyTabButton.addEventListener("click", ev => {
+    historyTabButton.classList.add("buttonPressed");
+    queueTabButton.classList.remove("buttonPressed");
+    trackHistoryList.style.display = "block";
+    trackQueueList.style.display = "none";
+});
+
+queueTabButton.addEventListener("click", ev => {
+    queueTabButton.classList.add("buttonPressed");
+    historyTabButton.classList.remove("buttonPressed");
+    trackQueueList.style.display = "block";
+    trackHistoryList.style.display = "none";
+});
+
 async function switchTrack(trackID: string) {
     if (!trackID) {
         // e.g. undefined for out-of-bounds index, i.e. empty track queue, reaching the end, or skipping backwards beyond the start
@@ -241,7 +258,7 @@ async function switchTrack(trackID: string) {
         return;
     }
 
-    await addTrackHistory(trackQueue[trackIndex]);
+    await addTrackHistory(trackID);
 
     if (trackIndex > MAX_BACKWARDS_QUEUE) {
         trackQueue.splice(0, trackIndex - MAX_BACKWARDS_QUEUE);
@@ -282,7 +299,7 @@ async function initializeShuffledQueue(currentTrackID: string) {
 function enableShuffle() {
     shuffle = true;
 
-    shuffleButton.classList.add("topBarButtonActive");
+    shuffleButton.classList.add("buttonPressed");
 
     initializeShuffledQueue(trackQueue[trackIndex] as string);
 }
@@ -310,7 +327,7 @@ async function initializeUnshuffledQueue(currentTrackID: string) {
 function disableShuffle() {
     shuffle = false;
 
-    shuffleButton.classList.remove("topBarButtonActive");
+    shuffleButton.classList.remove("buttonPressed");
 
     initializeUnshuffledQueue(trackQueue[trackIndex] as string);
 }
@@ -394,7 +411,7 @@ repeatButton.addEventListener("click", async ev => {
     switch (repeat) {
         case RepeatSetting.NONE:
             repeat = RepeatSetting.ALL;
-            repeatButton.classList.add("topBarButtonActive");
+            repeatButton.classList.add("buttonPressed");
             await refillTrackQueue();
             break;
         case RepeatSetting.ALL:
@@ -405,7 +422,7 @@ repeatButton.addEventListener("click", async ev => {
         case RepeatSetting.ONE:
             repeat = RepeatSetting.NONE;
             repeatButton.innerText = "🔁";
-            repeatButton.classList.remove("topBarButtonActive");
+            repeatButton.classList.remove("buttonPressed");
             discardRepeats();
             break;
     }

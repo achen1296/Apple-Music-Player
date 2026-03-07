@@ -113,3 +113,12 @@ main {
 
     padding-left: 10px;
 }
+
+#rightSidebarTabButtons {
+    display: flex;
+    flex-direction: row;
+}
+
+#trackHistoryList {
+    display: none;
+}

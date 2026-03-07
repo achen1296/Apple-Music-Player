@@ -10,7 +10,7 @@
     border-width: 2px;
 }
 
-.topBarButtonActive {
+.buttonPressed {
     /* repeat/shuffle buttons when repeat/shuffle is enabled */
     border: inset;
 }

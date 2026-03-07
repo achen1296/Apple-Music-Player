@@ -82,10 +82,12 @@
       </div>
     </main>
     <div id="rightSidebar">
-      <h1>History</h1>
-      <ul id="trackHistory"></ul>
-      <h1>Up Next</h1>
-      <ul id="trackQueue"></ul>
+      <div id="rightSidebarTabButtons">
+        <button id="historyTabButton">History</button>
+        <button id="queueTabButton" class="buttonPressed">Queue</button>
+      </div>
+      <ul id="trackHistoryList"></ul>
+      <ul id="trackQueueList"></ul>
     </div>
   </body>
   <script src="./renderer.js"></script>
