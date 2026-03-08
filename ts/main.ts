@@ -61,11 +61,6 @@ function killBackend() {
 
 app.on("will-quit", killBackend);
 
-const FILE_PATH_HOSTS = [
-    "trackfile",
-    "artwork"
-];
-
 async function backendRequest(url: string) {
     const sock = new zmq.Request();
     sock.connect(`tcp://localhost:${BACKEND_PORT}`);
@@ -100,7 +95,10 @@ app.whenReady().then(() => {
             });
         }
 
-        if (FILE_PATH_HOSTS.includes(host)) {
+        if (host === "trackfile") {
+            // already stored as a file:// URL
+            return net.fetch(response.toString());
+        } else if (host === "artwork") {
             return net.fetch(pathToFileURL(response.toString()).toString());
         } else {
             return new Response(response, {

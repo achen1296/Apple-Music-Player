@@ -36,11 +36,11 @@ Returns: space-separated list of track IDs
 
 Pathname: Track ID
 
-Returns: File path
+Returns: File path (as a URL already since that's how it's stored)
 
 ### Host: artwork
 
-Pathname: Artwork ID
+Pathname: Album/artist/track/playlist ID
 
 Returns: File path
 

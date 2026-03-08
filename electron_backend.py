@@ -1,3 +1,4 @@
+import sqlite3
 import json
 import sys
 import traceback
@@ -8,6 +9,7 @@ from urllib.parse import ParseResultBytes, urlparse
 import zmq
 
 from library_musicdb import Library, LibrarySearcher
+
 
 LIBRARY = Library()  # todo give the user a way to specify a non-default path
 
@@ -122,7 +124,31 @@ def playlistitems(parsed_url: ParseResultBytes):
 def trackfile(parsed_url: ParseResultBytes):
     id = hex_to_id(parsed_url.path.removeprefix(b"/"))
     track = LIBRARY.track_by_id(id)
-    return track.get_sub_string("file")
+    return track.get_sub_string("url")
+
+
+assert LIBRARY.file
+ARTWORK_DB = sqlite3.connect(LIBRARY.file.with_name("artwork.sqlite"))
+ARTWORK_FOLDER = LIBRARY.file.with_name("artwork")
+
+
+def artwork(parsed_url: ParseResultBytes):
+    id = hex_to_id(parsed_url.path.removeprefix(b"/"))
+
+    # signed int in the artwork.sqlite file
+    if id >= 1 << 63:
+        id -= 1 << 64
+
+    cursor = ARTWORK_DB.cursor()
+    if result := cursor.execute("select artwork_id from item_to_artwork where item_id = ? ", [id]).fetchone():
+        artwork_id = result[0]
+
+        if result := cursor.execute("select size_kind, extension from cache_items where artwork_id = ?", [artwork_id]).fetchone():
+            size_kind, extension = result
+
+            return str(ARTWORK_FOLDER / f"{artwork_id}_sk{size_kind}.{extension}")
+
+    return "assets/default_artwork.png"
 
 
 HANDLERS: dict[str, Callable[[ParseResultBytes], bytes | str]] = {
@@ -139,7 +165,7 @@ HANDLERS: dict[str, Callable[[ParseResultBytes], bytes | str]] = {
         albumitems,
         playlistitems,
         trackfile,
-        # artwork,
+        artwork,
     ]
 }
 

@@ -50,8 +50,7 @@ const customSrc = {
 
 // player
 
-const playerDiv = document.getElementById("player") as HTMLDivElement;
-
+const currentTrackImage = document.getElementById("currentTrackImage") as HTMLImageElement;
 const currentTrackNameText = document.getElementById("currentTrackNameText") as HTMLSpanElement;
 const currentTrackArtistText = document.getElementById("currentTrackArtistText") as HTMLSpanElement;
 const currentTrackAlbumText = document.getElementById("currentTrackAlbumText") as HTMLSpanElement;
@@ -252,6 +251,8 @@ async function switchTrack(trackID: string) {
     if (!trackID) {
         // e.g. undefined for out-of-bounds index, i.e. empty track queue, reaching the end, or skipping backwards beyond the start
         currentAudio.src = "";
+        // this should load the default image
+        currentTrackImage.src = `app://artwork/00`;
         currentTrackNameText.innerText = "...";
         currentTrackArtistText.innerText = "...";
         currentTrackAlbumText.innerText = "...";
@@ -269,6 +270,8 @@ async function switchTrack(trackID: string) {
     currentAudio.src = customSrc.trackFile(trackID);
 
     currentAudio.playbackRate = Number(playRateSlider.value); // this isn't remembered automatically (unlike volume)
+
+    currentTrackImage.src = `app://artwork/${trackID}`;
 
     const { name, album, artist } = await request.trackMeta(trackID);
 
@@ -540,8 +543,6 @@ async function loadAlbumList() {
     }
 }
 
-loadAlbumList();
-
 async function loadPlaylistList() {
     const playlistIDs = await request.playlistList();
     if (playlistList.firstElementChild) {
@@ -560,4 +561,6 @@ async function loadPlaylistList() {
     }
 }
 
+// expensive, do these last
+loadAlbumList();
 loadPlaylistList();
