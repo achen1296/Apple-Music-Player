@@ -252,11 +252,15 @@ async function switchTrack(trackID: string) {
         // e.g. undefined for out-of-bounds index, i.e. empty track queue, reaching the end, or skipping backwards beyond the start
         currentAudio.src = "";
         // this should load the default image
-        currentTrackImage.src = `app://artwork/00`;
+        currentTrackImage.src = customSrc.artwork("00");
         currentTrackNameText.innerText = "...";
         currentTrackArtistText.innerText = "...";
         currentTrackAlbumText.innerText = "...";
         return;
+    }
+
+    if (currentAudio.src === customSrc.trackFile(trackID)) {
+        return; // already playing the specified track, don't switch because that causes it to stop playing
     }
 
     await addTrackHistory(trackID);
@@ -264,14 +268,14 @@ async function switchTrack(trackID: string) {
     if (trackIndex > MAX_BACKWARDS_QUEUE) {
         trackQueue.splice(0, trackIndex - MAX_BACKWARDS_QUEUE);
         trackIndex = MAX_BACKWARDS_QUEUE;
-        // no effect on the display since only removing ones already not shownf
+        // no effect on the display since only removing ones already not shown
     }
 
     currentAudio.src = customSrc.trackFile(trackID);
 
     currentAudio.playbackRate = Number(playRateSlider.value); // this isn't remembered automatically (unlike volume)
 
-    currentTrackImage.src = `app://artwork/${trackID}`;
+    currentTrackImage.src = customSrc.artwork(trackID);
 
     const { name, album, artist } = await request.trackMeta(trackID);
 
