@@ -62,12 +62,27 @@ I have decided to make my program behave differently in the following ways:
 
 ## Omitted Features
 
-These are features I will likely never add, because it isn't difficult to just open up the official program to do it, and some I consider unimportant.
+For some combination of the following reasons...:
 
+- because it would be a lot of work
+- because it isn't difficult to just open up the official program to do it
+- because they are simply unimportant/not that useful (in my opinion)
+
+...these are features are unlikely to be implemented:
+
+- Adding new albums/artists/tracks or creating new playlists — one doesn't do this nearly as often as editing/organizing and the official program already has fine support for adding many tracks at once.
+  - There are two reasons for this:
+    - Much of the data remains mysterious. See submodule readme.
+    - Creating items also necessitates creating/modifying other linked data and it is a lot of work to replicate all of these knock-on effects. For example:
+      - When adding a track, if no other track has the same artist/album, the artist/album must be created as well.
+      - When creating any item, artwork images must be fetched (from online)/extracted (from audio files)/generated (for playlists).
+  - Exceptions where I have experimentally verified neither of these concerns was actually a problem:
+    - Modifying the tracks in a playlist/reordering them
+  - I may experiment more in the future either to discover what minimal data is needed to properly create other data from scratch and/or to understand more of the format so that less of it is mysterious, thus supporting more of these capabilities.
+  - (todo) This is why the fields to edit album/artist on a track are dropdown selections from the current existing choices rather than a plain text entry
 - Any integration with the Apple Music/iTunes online storefront/subscription service, except for (todo) the link to "Show in iTunes store" (which was easy to implement as opening in the regular web browser so why not)
-- Adding new tracks in general (that is, both from the store and from local files) (you don't do this nearly as often as editing/organizing and the official program already supports adding many tracks at once anyway)
 - Generating playlist artwork from the preset options the official program offers (mainly gradients that the name is laid over)
-  - (todo) My program generates a playlist artwork from the tracks in it, and you can also set a custom one, same as the official program
+  - (todo?) My program generates a playlist artwork from the tracks in it, and you can also set a custom one, same as the official program
 
 # Asset Credits
 
