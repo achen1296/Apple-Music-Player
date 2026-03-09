@@ -6,7 +6,7 @@ I had already written the editor backend in Python (as my go-to language) when I
 
 # Library File Correctness
 
-As stated in the Apple-Music-Editor readme (in case you didn't read it), it may not be 100% correct and accurate yet. (todo) That code is set to make backups on every save; the player backend reduces that down to once a day + delete files older than 30 days except for one each month (up to you to manually delete these if you don't need them, but this shouldn't fill your storage very fast because even big libraries are only in the ~10 MB range). To verify that everything is still correct, open the official program once in a while and make sure your library still loads. With such generous automatic backups, it is not my fault if you end up without a valid copy of your library.
+As stated in the Apple-Music-Editor readme (in case you didn't read it), it may not be 100% correct and accurate yet. That code is set to make backups on every save; the player backend reduces that down to once a day + delete files older than 30 days except for one each month (up to you to manually delete these if you don't need them, but this shouldn't fill your storage very fast because even big libraries are only in the ~10 MB range). To verify that everything is still correct, open the official program once in a while and make sure your library still loads. With such generous automatic backups, it is not my fault if you end up without a valid copy of your library.
 
 # Feature Differences Compared to Official Apple Music Player
 
@@ -19,7 +19,32 @@ Obviously, the reason why I wanted to make this alternative GUI at all is to add
 - Being able to control the playback speed (which is conveniently another thing a web app can do natively).
 - (todo) Being able to pitch shift.
 
-## Different Features
+## Modified Features
+
+### Play and Skip Count
+
+Experimentally in the official program, the play count increments when:
+
+- Track playback reaches the end naturally
+- OR:
+  - The skip forward button is pressed OR another track is played
+  - AND playback position is within the last 10 seconds
+  - AND playback position is within the last ~60% of the song's duration (reducing the window to count as a play for very short tracks)
+
+The skip count increments when:
+
+- The skip forward button is pressed OR another track is played
+- AND playback position is within the first 20 seconds
+- AND playback position is _not_ within the first 2 seconds (presumably so that it doesn't count as a skip unless you have actually heard a little bit of the song and actively decided to skip it rather than just jumping ahead a lot)
+- AND the track is _not_ less than 20 seconds long
+
+Note that this means:
+
+- Yes, short enough tracks simply CANNOT have their skip count incremented; I do have some this short in my own library with non-zero skip count, but they are all songs added when I was still using iTunes, so I assume the count is inherited from that program which had different rules
+- Neither is incremented when pressing the skip backward button, no matter what
+- Neither is incremented when skipping forward/switching tracks in the middle part between first 20 s and last 60%/last 10 s
+
+In my program... (todo)
 
 ### Track Queue/Shuffle and Repeat
 
