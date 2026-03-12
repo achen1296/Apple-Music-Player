@@ -1,6 +1,6 @@
 "use strict";
 
-declare function backendRequest(url: string): Promise<string>;
+declare function backendRequest(url: string, body?: string): Promise<string>;
 
 const request = {
     albumList: async function () {
@@ -40,6 +40,18 @@ const request = {
     },
     playlistItems: async function (playlistID: string) {
         return (await backendRequest(`app://playlistItems/${playlistID}`)).split(" ");
+    },
+    albumUpdate: async function (albumID: string, data: any) {
+        await backendRequest(`app://albumUpdate/${albumID}`, JSON.stringify(data))
+    },
+    artistUpdate: async function (artistID: string, data: any) {
+        await backendRequest(`app://artistUpdate/${artistID}`, JSON.stringify(data))
+    },
+    trackUpdate: async function (trackID: string, data: any) {
+        await backendRequest(`app://trackUpdate/${trackID}`, JSON.stringify(data))
+    },
+    playlistUpdate: async function (playlistID: string, data: any) {
+        await backendRequest(`app://playlistUpdate/${playlistID}`, JSON.stringify(data))
     },
 };
 

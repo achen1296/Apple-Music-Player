@@ -4,6 +4,8 @@ Using ZeroMQ to communicate over TCP sockets. This application isn't _that_ comp
 
 Requests may be made from the frontend either through the app:// custom protocol, or directly by using `backendRequest()` (sends request as a URL anyway to match the app:// protocol for simplicity).
 
+An "item" refers to an album, artist, track, or playlist as appropriate from the context.
+
 ## Errors
 
 For any kind of error, the return value is "error" followed by a space and then an error message. The app:// protocol will convert this into a status 400 response with the message attached as the body.
@@ -18,19 +20,19 @@ All IDs are in hexadecimal format (and they are all 8 bytes/16 hexadecimal digit
 
 No arguments.
 
-Returns: space-separated list of ALL track/album/playlist IDs
+Returns: Space-separated list of ALL item IDs
 
 ### Host: <album/artist/track/playlist>Meta
 
-Pathname: Track/album/playlist ID
+Pathname: Item ID
 
-Returns: Track/album/playlist metadata as JSON string, not including the list of tracks for album/playlist
+Returns: Item metadata as JSON string. This does not including the list of tracks for album/playlist which require special logic (and it would also be expensive).
 
 ### Host: <album/playlist>Items
 
-Pathname: Album/playlist ID
+Pathname: Item ID
 
-Returns: space-separated list of track IDs
+Returns: Space-separated list of track IDs
 
 ### Host: trackFile
 
@@ -40,10 +42,18 @@ Returns: File path (as a URL already since that's how it's stored)
 
 ### Host: artwork
 
-Pathname: Album/artist/track/playlist ID
+Pathname: Item ID
 
 Returns: File path
 
 ## Updating Library Data
 
-(todo... e.g. set play/skip count)
+If any modification is made, the library file will be saved once the program is closed. (See also [readme](readme.md) for backup strategy.)
+
+### Host: <album/artist/track/playlist>Update
+
+Pathname: Item ID
+
+Body: JSON string to decode and pass to `Section.update` in the backend (pass dates as integers). Should be mostly intuitive if you understand the library structure; note that `BinaryObjectParentSection` override this method, which applies to all 4 of these item types. Example: to update a track's play count to 5, use `{ "plays_skips": { "play_count": 5 } }`. (In this case, should also increment `true_play_count`.)
+
+Returns: Nothing

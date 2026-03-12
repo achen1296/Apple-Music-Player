@@ -1,3 +1,4 @@
+from library_musicdb import Section
 import sqlite3
 import json
 import sys
@@ -33,70 +34,57 @@ def id_to_hex(id: int):
     return flip_hex_endianness(f"{id:016x}")
 
 
-def album_list(parsed_url: ParseResultBytes):
+def album_list(parsed_url: ParseResultBytes, body: bytes | None):
     return " ".join(
         id_to_hex(a.get_int("id_album"))
         for a in LIBRARY.albums.children
     )
 
 
-def artist_list(parsed_url: ParseResultBytes):
+def artist_list(parsed_url: ParseResultBytes, body: bytes | None):
     return " ".join(
         id_to_hex(a.get_int("id_artist"))
         for a in LIBRARY.artists.children
     )
 
 
-def track_list(parsed_url: ParseResultBytes):
+def track_list(parsed_url: ParseResultBytes, body: bytes | None):
     return " ".join(
         id_to_hex(t.get_int("id_track"))
         for t in LIBRARY.tracks.children
     )
 
 
-def playlist_list(parsed_url: ParseResultBytes):
+def playlist_list(parsed_url: ParseResultBytes, body: bytes | None):
     return " ".join(
         id_to_hex(p.get_int("id_playlist"))
         for p in LIBRARY.playlists.children
     )
 
 
-def album_meta(parsed_url: ParseResultBytes):
+def _item_meta(parsed_url: ParseResultBytes, body: bytes | None, item_get: Callable[[int], Section]):
     id = hex_to_id(parsed_url.path.removeprefix(b"/"))
-    album = LIBRARY.album_by_id(id)
-    return json.dumps({
-        "name": album.get_sub_string("name"),
-        "artist": album.get_sub_string("artist"),
-    })
+    item = item_get(id)
+    return json.dumps(item.as_dict())
 
 
-def artist_meta(parsed_url: ParseResultBytes):
-    id = hex_to_id(parsed_url.path.removeprefix(b"/"))
-    artist = LIBRARY.artist_by_id(id)
-    return json.dumps({
-        "name": artist.get_sub_string("name"),
-    })
+def album_meta(parsed_url: ParseResultBytes, body: bytes | None):
+    return _item_meta(parsed_url, body, LIBRARY.album_by_id)
 
 
-def track_meta(parsed_url: ParseResultBytes):
-    id = hex_to_id(parsed_url.path.removeprefix(b"/"))
-    track = LIBRARY.track_by_id(id)
-    return json.dumps({
-        "name": track.get_sub_string("name"),
-        "album": track.get_sub_string("album"),
-        "artist": track.get_sub_string("artist"),
-    })
+def artist_meta(parsed_url: ParseResultBytes, body: bytes | None):
+    return _item_meta(parsed_url, body, LIBRARY.artist_by_id)
 
 
-def playlist_meta(parsed_url: ParseResultBytes):
-    id = hex_to_id(parsed_url.path.removeprefix(b"/"))
-    playlist = LIBRARY.playlist_by_id(id)
-    return json.dumps({
-        "name": playlist.get_sub_string("name"),
-    })
+def track_meta(parsed_url: ParseResultBytes, body: bytes | None):
+    return _item_meta(parsed_url, body, LIBRARY.track_by_id)
 
 
-def album_items(parsed_url: ParseResultBytes):
+def playlist_meta(parsed_url: ParseResultBytes, body: bytes | None):
+    return _item_meta(parsed_url, body, LIBRARY.playlist_by_id)
+
+
+def album_items(parsed_url: ParseResultBytes, body: bytes | None):
     id = hex_to_id(parsed_url.path.removeprefix(b"/"))
     return " ".join(
         id_to_hex(t.get_int("id_track"))
@@ -112,7 +100,7 @@ PLAYLIST_ITEMS_SEARCHER = (
 )
 
 
-def playlist_items(parsed_url: ParseResultBytes):
+def playlist_items(parsed_url: ParseResultBytes, body: bytes | None):
     id = hex_to_id(parsed_url.path.removeprefix(b"/"))
     playlist = LIBRARY.playlist_by_id(id)
     return " ".join(
@@ -121,7 +109,7 @@ def playlist_items(parsed_url: ParseResultBytes):
     )
 
 
-def track_file(parsed_url: ParseResultBytes):
+def track_file(parsed_url: ParseResultBytes, body: bytes | None):
     id = hex_to_id(parsed_url.path.removeprefix(b"/"))
     track = LIBRARY.track_by_id(id)
     return track.get_sub_string("url")
@@ -132,7 +120,7 @@ ARTWORK_DB = sqlite3.connect(LIBRARY.file.with_name("artwork.sqlite"))
 ARTWORK_FOLDER = LIBRARY.file.with_name("artwork")
 
 
-def artwork(parsed_url: ParseResultBytes):
+def artwork(parsed_url: ParseResultBytes, body: bytes | None):
     id = hex_to_id(parsed_url.path.removeprefix(b"/"))
 
     # signed int in the artwork.sqlite file
@@ -151,15 +139,40 @@ def artwork(parsed_url: ParseResultBytes):
     return "assets/default_artwork.png"
 
 
-def to_camel_case(s: str):
-    s = s.title()
-    s = s[0].lower() + s[1:]
-    s = s.replace("_", "")
+def _item_update(parsed_url: ParseResultBytes, body: bytes | None, item_get: Callable[[int], Section]):
+    id = hex_to_id(parsed_url.path.removeprefix(b"/"))
+    item = item_get(id)
+
+    assert body
+    new_data = json.loads(body)
+
+    item.update(new_data)
+
+
+def album_update(parsed_url: ParseResultBytes, body: bytes | None):
+    _item_update(parsed_url, body, LIBRARY.album_by_id)
+
+
+def artist_update(parsed_url: ParseResultBytes, body: bytes | None):
+    _item_update(parsed_url, body, LIBRARY.artist_by_id)
+
+
+def track_update(parsed_url: ParseResultBytes, body: bytes | None):
+    _item_update(parsed_url, body, LIBRARY.track_by_id)
+
+
+def playlist_update(parsed_url: ParseResultBytes, body: bytes | None):
+    _item_update(parsed_url, body, LIBRARY.playlist_by_id)
+
+
+def to_hostname(s: str):
+    # urlparse makes the hostname all lowercase
+    s = s.replace("_", "").lower()
     return s
 
 
-HANDLERS: dict[str, Callable[[ParseResultBytes], bytes | str]] = {
-    to_camel_case(func.__name__): func
+HANDLERS: dict[str, Callable[[ParseResultBytes, bytes | None], bytes | str | None]] = {
+    to_hostname(func.__name__): func
     for func in [
         album_list,
         artist_list,
@@ -173,11 +186,15 @@ HANDLERS: dict[str, Callable[[ParseResultBytes], bytes | str]] = {
         playlist_items,
         track_file,
         artwork,
+        album_update,
+        artist_update,
+        track_update,
+        playlist_update,
     ]
 }
 
 
-def handle_request(url: bytes) -> bytes:
+def handle_request(url: bytes, body: bytes | None) -> bytes:
     parsed_url = urlparse(url)
 
     if not parsed_url.hostname:
@@ -187,7 +204,9 @@ def handle_request(url: bytes) -> bytes:
     except KeyError:
         raise Exception(f"unknown hostname {parsed_url.hostname}")
 
-    result = handler(parsed_url)
+    result = handler(parsed_url, body)
+    if not result:
+        return b""  # ZMQ request-reply pattern, reply required
     if isinstance(result, str):
         result = result.encode()
     return result
@@ -206,7 +225,13 @@ def main(port: int):
         log_file = open("backend_log.txt", "wb")
 
     while True:
-        url = socket.recv()
+        received = socket.recv()
+        split_result = received.split(b" ", 1)
+        if len(split_result) > 1:
+            url, body = split_result
+        else:
+            url = split_result[0]
+            body = None
 
         if DEBUG_LOG:
             assert log_file
@@ -215,7 +240,7 @@ def main(port: int):
             log_file.write(b"\n")
 
         try:
-            response = handle_request(url)
+            response = handle_request(url, body)
         except Exception as x:
             response = f"error {traceback.format_exc()}".encode()  # send entire traceback to the main process console
 

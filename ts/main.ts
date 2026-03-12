@@ -61,10 +61,16 @@ function killBackend() {
 
 app.on("will-quit", killBackend);
 
-async function backendRequest(url: string) {
+async function backendRequest(url: string, body?: string) {
+    // body usually JSON but no need to decode it on this end only to have to make it into a string again
     const sock = new zmq.Request();
     sock.connect(`tcp://localhost:${BACKEND_PORT}`);
-    await sock.send(url);
+    if (body) {
+        // URL can't have spaces
+        await sock.send(url + " " + body);
+    } else { // empty string or undefined
+        await sock.send(url);
+    }
     const [result] = await sock.receive();
     const resultString = result.toString();
     if (resultString.startsWith("error ")) {
@@ -78,7 +84,7 @@ async function backendRequest(url: string) {
 app.whenReady().then(() => {
     spawnBackend();
 
-    ipcMain.handle("backendRequest", (ev, url: string) => backendRequest(url));
+    ipcMain.handle("backendRequest", (ev, url: string, body?: string) => backendRequest(url, body));
 
     createWindow();
 
@@ -86,7 +92,7 @@ app.whenReady().then(() => {
         // use host to determine how to interpret the result, but the rest of the URL parsing is done on the Python side
         const { host } = new URL(req.url);
 
-        const response = await backendRequest(req.url);
+        const response = await backendRequest(req.url, await req.text());
 
         if (response.startsWith("error ")) {
             return new Response(response.slice("error ".length), {
@@ -95,7 +101,7 @@ app.whenReady().then(() => {
             });
         }
 
-        if (host === "trackfile") {
+        if (host === "trackFile") {
             // already stored as a file:// URL
             return net.fetch(response.toString());
         } else if (host === "artwork") {
