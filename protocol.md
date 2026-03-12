@@ -14,25 +14,25 @@ Whenever the return value is a file path below, the app:// protocol is set up to
 
 All IDs are in hexadecimal format (and they are all 8 bytes/16 hexadecimal digits).
 
-### Host: <album/artist/track/playlist>list
+### Host: <album/artist/track/playlist>List
 
 No arguments.
 
 Returns: space-separated list of ALL track/album/playlist IDs
 
-### Host: <album/artist/track/playlist>meta
+### Host: <album/artist/track/playlist>Meta
 
 Pathname: Track/album/playlist ID
 
 Returns: Track/album/playlist metadata as JSON string, not including the list of tracks for album/playlist
 
-### Host: <album/playlist>items
+### Host: <album/playlist>Items
 
 Pathname: Album/playlist ID
 
 Returns: space-separated list of track IDs
 
-### Host: trackfile
+### Host: trackFile
 
 Pathname: Track ID
 

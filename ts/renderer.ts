@@ -4,47 +4,47 @@ declare function backendRequest(url: string): Promise<string>;
 
 const request = {
     albumList: async function () {
-        return (await backendRequest("app://albumlist")).split(" ");
+        return (await backendRequest("app://albumList")).split(" ");
     },
     artistList: async function () {
-        return (await backendRequest("app://artistlist")).split(" ");
+        return (await backendRequest("app://artistList")).split(" ");
     },
     trackList: async function () {
-        return (await backendRequest("app://tracklist")).split(" ");
+        return (await backendRequest("app://trackList")).split(" ");
     },
     playlistList: async function () {
-        return (await backendRequest("app://playlistlist")).split(" ");
+        return (await backendRequest("app://playlistList")).split(" ");
     },
     albumMeta: async function (albumID: string): Promise<
         { name: string, artist: string }
     > {
-        return JSON.parse(await backendRequest(`app://albummeta/${albumID}`));
+        return JSON.parse(await backendRequest(`app://albumMeta/${albumID}`));
     },
     artistMeta: async function (artistID: string): Promise<
         { name: string }
     > {
-        return JSON.parse(await backendRequest(`app://artistmeta/${artistID}`));
+        return JSON.parse(await backendRequest(`app://artistMeta/${artistID}`));
     },
     trackMeta: async function (trackID: string): Promise<
         { name: string, album: string, artist: string }
     > {
-        return JSON.parse(await backendRequest(`app://trackmeta/${trackID}`));
+        return JSON.parse(await backendRequest(`app://trackMeta/${trackID}`));
     },
     playlistMeta: async function (playlistID: string): Promise<
         { name: string }
     > {
-        return JSON.parse(await backendRequest(`app://playlistmeta/${playlistID}`));
+        return JSON.parse(await backendRequest(`app://playlistMeta/${playlistID}`));
     },
     albumItems: async function (albumID: string) {
-        return (await backendRequest(`app://albumitems/${albumID}`)).split(" ");
+        return (await backendRequest(`app://albumItems/${albumID}`)).split(" ");
     },
     playlistItems: async function (playlistID: string) {
-        return (await backendRequest(`app://playlistitems/${playlistID}`)).split(" ");
+        return (await backendRequest(`app://playlistItems/${playlistID}`)).split(" ");
     },
 };
 
 const customSrc = {
-    trackFile: (trackID: string) => `app://trackfile/${trackID}`,
+    trackFile: (trackID: string) => `app://trackFile/${trackID}`,
     artwork: (artworkID: string) => `app://artwork/${artworkID}`,
 };
 

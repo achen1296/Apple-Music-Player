@@ -33,35 +33,35 @@ def id_to_hex(id: int):
     return flip_hex_endianness(f"{id:016x}")
 
 
-def albumlist(parsed_url: ParseResultBytes):
+def album_list(parsed_url: ParseResultBytes):
     return " ".join(
         id_to_hex(a.get_int("id_album"))
         for a in LIBRARY.albums.children
     )
 
 
-def artistlist(parsed_url: ParseResultBytes):
+def artist_list(parsed_url: ParseResultBytes):
     return " ".join(
         id_to_hex(a.get_int("id_artist"))
         for a in LIBRARY.artists.children
     )
 
 
-def tracklist(parsed_url: ParseResultBytes):
+def track_list(parsed_url: ParseResultBytes):
     return " ".join(
         id_to_hex(t.get_int("id_track"))
         for t in LIBRARY.tracks.children
     )
 
 
-def playlistlist(parsed_url: ParseResultBytes):
+def playlist_list(parsed_url: ParseResultBytes):
     return " ".join(
         id_to_hex(p.get_int("id_playlist"))
         for p in LIBRARY.playlists.children
     )
 
 
-def albummeta(parsed_url: ParseResultBytes):
+def album_meta(parsed_url: ParseResultBytes):
     id = hex_to_id(parsed_url.path.removeprefix(b"/"))
     album = LIBRARY.album_by_id(id)
     return json.dumps({
@@ -70,7 +70,7 @@ def albummeta(parsed_url: ParseResultBytes):
     })
 
 
-def artistmeta(parsed_url: ParseResultBytes):
+def artist_meta(parsed_url: ParseResultBytes):
     id = hex_to_id(parsed_url.path.removeprefix(b"/"))
     artist = LIBRARY.artist_by_id(id)
     return json.dumps({
@@ -78,7 +78,7 @@ def artistmeta(parsed_url: ParseResultBytes):
     })
 
 
-def trackmeta(parsed_url: ParseResultBytes):
+def track_meta(parsed_url: ParseResultBytes):
     id = hex_to_id(parsed_url.path.removeprefix(b"/"))
     track = LIBRARY.track_by_id(id)
     return json.dumps({
@@ -88,7 +88,7 @@ def trackmeta(parsed_url: ParseResultBytes):
     })
 
 
-def playlistmeta(parsed_url: ParseResultBytes):
+def playlist_meta(parsed_url: ParseResultBytes):
     id = hex_to_id(parsed_url.path.removeprefix(b"/"))
     playlist = LIBRARY.playlist_by_id(id)
     return json.dumps({
@@ -96,7 +96,7 @@ def playlistmeta(parsed_url: ParseResultBytes):
     })
 
 
-def albumitems(parsed_url: ParseResultBytes):
+def album_items(parsed_url: ParseResultBytes):
     id = hex_to_id(parsed_url.path.removeprefix(b"/"))
     return " ".join(
         id_to_hex(t.get_int("id_track"))
@@ -112,7 +112,7 @@ PLAYLIST_ITEMS_SEARCHER = (
 )
 
 
-def playlistitems(parsed_url: ParseResultBytes):
+def playlist_items(parsed_url: ParseResultBytes):
     id = hex_to_id(parsed_url.path.removeprefix(b"/"))
     playlist = LIBRARY.playlist_by_id(id)
     return " ".join(
@@ -121,7 +121,7 @@ def playlistitems(parsed_url: ParseResultBytes):
     )
 
 
-def trackfile(parsed_url: ParseResultBytes):
+def track_file(parsed_url: ParseResultBytes):
     id = hex_to_id(parsed_url.path.removeprefix(b"/"))
     track = LIBRARY.track_by_id(id)
     return track.get_sub_string("url")
@@ -151,20 +151,27 @@ def artwork(parsed_url: ParseResultBytes):
     return "assets/default_artwork.png"
 
 
+def to_camel_case(s: str):
+    s = s.title()
+    s = s[0].lower() + s[1:]
+    s = s.replace("_", "")
+    return s
+
+
 HANDLERS: dict[str, Callable[[ParseResultBytes], bytes | str]] = {
-    func.__name__: func
+    to_camel_case(func.__name__): func
     for func in [
-        albumlist,
-        artistlist,
-        tracklist,
-        playlistlist,
-        albummeta,
-        artistmeta,
-        trackmeta,
-        playlistmeta,
-        albumitems,
-        playlistitems,
-        trackfile,
+        album_list,
+        artist_list,
+        track_list,
+        playlist_list,
+        album_meta,
+        artist_meta,
+        track_meta,
+        playlist_meta,
+        album_items,
+        playlist_items,
+        track_file,
         artwork,
     ]
 }
