@@ -1,16 +1,17 @@
-from library_musicdb import Section
-import sqlite3
 import json
+import os
+import sqlite3
 import sys
 import traceback
 from collections.abc import Callable
+from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Final
 from urllib.parse import ParseResultBytes, urlparse
 
 import zmq
 
-from library_musicdb import Library, LibrarySearcher
-
+from library_musicdb import Library, LibrarySearcher, Section
 
 LIBRARY = Library()  # todo give the user a way to specify a non-default path
 
@@ -139,9 +140,83 @@ def artwork(parsed_url: ParseResultBytes, body: bytes | None):
     return "assets/default_artwork.png"
 
 
-def _item_update(parsed_url: ParseResultBytes, body: bytes | None, item_get: Callable[[int], Section]):
+first_save_this_instance = True
+most_recent_backup: datetime | None = None
+
+
+def save_library():
+    global first_save_this_instance, most_recent_backup
+
+    assert LIBRARY.file
+
+    now = datetime.now()
+
+    if first_save_this_instance:
+        first_save_this_instance = False
+
+        # find backups older than 30 days and delete them, except for the first one each calendar month
+        # doing this only on the first save of the program instance is more than enough assuming one doesn't leave the program open for durations on the order of months
+
+        # checking for the most recent backup at this time (to determine if it is the first one today) should also be fine, assuming single instance; anyway, the worst that will happen is extra backups
+        # rather than assuming the name format created by the save() function, we'll just check for any .musicdb file and use its birth time metadata
+
+        library_backups: list[tuple[datetime, Path]] = []
+
+        for f in LIBRARY.file.parent.iterdir():
+            if f.suffix != ".musicdb":
+                continue
+            if f == LIBRARY.file:
+                continue
+            if "Preferences" in f.name:
+                # don't consider "Library Preferences.musicdb" as a backup
+                continue
+
+            stat = f.stat()
+
+            try:
+                birth = stat.st_birthtime
+            except AttributeError:
+                birth = stat.st_ctime  # closest we'll get if st_birthtime is not available on this platform
+            birth_datetime = datetime.fromtimestamp(birth)
+
+            library_backups.append(
+                (birth_datetime, f)
+            )
+
+        library_backups.sort(key=lambda t: t[0])
+
+        last_month: tuple[int | None, int | None] = None, None
+        to_delete: list[Path] = []
+        for d, f in library_backups:
+            month = d.year, d.month
+            if month == last_month and now - d >= timedelta(days=30):
+                to_delete.append(f)
+                print(f"deleting {f}")
+            else:
+                print(f"not deleting {f}")
+            last_month = month
+
+        for f in to_delete:
+            os.remove(f)
+
+        if len(library_backups) > 0:
+            most_recent_backup = library_backups[-1][0]
+
+            print(f"most recent backup was made {most_recent_backup.isoformat()}")
+
+    make_backup = (
+        most_recent_backup is None
+        or now - most_recent_backup >= timedelta(days=1)
+    )
+    print(f"make backup: {make_backup}")
+    LIBRARY.save(LIBRARY.file, make_backup=make_backup)
+    if make_backup:
+        most_recent_backup = now
+
+
+def _item_update(parsed_url: ParseResultBytes, body: bytes | None, get_item: Callable[[int], Section]):
     id = hex_to_id(parsed_url.path.removeprefix(b"/"))
-    item = item_get(id)
+    item = get_item(id)
 
     assert body
     new_data = json.loads(body)
@@ -194,9 +269,7 @@ HANDLERS: dict[str, Callable[[ParseResultBytes, bytes | None], bytes | str | Non
 }
 
 
-def handle_request(url: bytes, body: bytes | None) -> bytes:
-    parsed_url = urlparse(url)
-
+def handle_request(parsed_url: ParseResultBytes, body: bytes | None) -> bytes:
     if not parsed_url.hostname:
         raise Exception("no hostname")
     try:
@@ -227,6 +300,9 @@ def main(port: int):
 
     while True:
         received = socket.recv()
+        if DEBUG_LOG:
+            print("recv:", received)
+
         split_result = received.split(b" ", 1)
         if len(split_result) > 1:
             url, body = split_result
@@ -234,23 +310,26 @@ def main(port: int):
             url = split_result[0]
             body = None
 
-        if DEBUG_LOG:
-            print("recv:", received)
+        parsed_url = urlparse(url)
 
         try:
-            response = handle_request(url, body)
-        except Exception as x:
+            response = handle_request(parsed_url, body)
+        except Exception:
             response = f"error {traceback.format_exc()}".encode()  # send entire traceback to the main process console
 
         if DEBUG_LOG:
             print("send:", response)
             print()
-
         socket.send(response)
 
         if DEBUG_LOG:
             assert log_file
             log_file.flush()
+
+        if parsed_url.hostname and b"update" in parsed_url.hostname:
+            # do this AFTER sending the response back to avoid adding this delay to the GUI
+            # todo handle this in a separate thread?
+            save_library()
 
 
 if __name__ == "__main__":
