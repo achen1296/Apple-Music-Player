@@ -214,15 +214,16 @@ def handle_request(url: bytes, body: bytes | None) -> bytes:
 
 DEBUG_LOG: Final[bool] = True
 
+log_file = None
+if DEBUG_LOG:
+    log_file = open("backend_log.txt", "w")
+    sys.stdout = log_file
+
 
 def main(port: int):
     context = zmq.Context()
     socket = context.socket(zmq.REP)
     socket.bind(f"tcp://*:{port}")
-
-    log_file = None
-    if DEBUG_LOG:
-        log_file = open("backend_log.txt", "wb")
 
     while True:
         received = socket.recv()
@@ -234,10 +235,7 @@ def main(port: int):
             body = None
 
         if DEBUG_LOG:
-            assert log_file
-            log_file.write(b"recv: ")
-            log_file.write(url)
-            log_file.write(b"\n")
+            print("recv:", received)
 
         try:
             response = handle_request(url, body)
@@ -245,10 +243,8 @@ def main(port: int):
             response = f"error {traceback.format_exc()}".encode()  # send entire traceback to the main process console
 
         if DEBUG_LOG:
-            assert log_file
-            log_file.write(b"send: ")
-            log_file.write(response)
-            log_file.write(b"\n\n")
+            print("send:", response)
+            print()
 
         socket.send(response)
 
