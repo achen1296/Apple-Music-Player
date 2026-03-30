@@ -2,6 +2,41 @@
 
 declare function backendRequest(url: string, body?: string): Promise<string>;
 
+function dateToInt(date: Date) {
+    // .valueOf is in milliseconds, but only stored as integer seconds in library
+    return Math.floor(date.valueOf() / 1000) + 2082844800;
+}
+
+function intToDate(i: number) {
+    return new Date((i - 2082844800) * 1000);
+}
+
+type AlbumMeta = { name: string, artist: string };
+type ArtistMeta = { name: string };
+type TrackMeta = {
+    name: string,
+    album: string,
+    artist: string,
+    plays_skips: {
+        date_last_played: number,
+        play_count: number,
+        true_play_count: number,
+        date_first_played: number,
+        date_last_skipped: number,
+        skip_count: number,
+        true_skip_count: number,
+    }
+};
+type PlaylistMeta = { name: string };
+
+// https://stackoverflow.com/questions/41980195/recursive-partialt-in-typescript
+type RecursivePartial<T> = {
+    [P in keyof T]?:
+    T[P] extends (infer U)[] ? RecursivePartial<U>[] :
+    T[P] extends object | undefined ? RecursivePartial<T[P]> :
+    T[P];
+};
+
 const request = {
     albumList: async function () {
         return (await backendRequest("app://albumList")).split(" ");
@@ -15,24 +50,16 @@ const request = {
     playlistList: async function () {
         return (await backendRequest("app://playlistList")).split(" ");
     },
-    albumMeta: async function (albumID: string): Promise<
-        { name: string, artist: string }
-    > {
+    albumMeta: async function (albumID: string): Promise<AlbumMeta> {
         return JSON.parse(await backendRequest(`app://albumMeta/${albumID}`));
     },
-    artistMeta: async function (artistID: string): Promise<
-        { name: string }
-    > {
+    artistMeta: async function (artistID: string): Promise<ArtistMeta> {
         return JSON.parse(await backendRequest(`app://artistMeta/${artistID}`));
     },
-    trackMeta: async function (trackID: string): Promise<
-        { name: string, album: string, artist: string }
-    > {
+    trackMeta: async function (trackID: string): Promise<TrackMeta> {
         return JSON.parse(await backendRequest(`app://trackMeta/${trackID}`));
     },
-    playlistMeta: async function (playlistID: string): Promise<
-        { name: string }
-    > {
+    playlistMeta: async function (playlistID: string): Promise<PlaylistMeta> {
         return JSON.parse(await backendRequest(`app://playlistMeta/${playlistID}`));
     },
     albumItems: async function (albumID: string) {
@@ -41,17 +68,17 @@ const request = {
     playlistItems: async function (playlistID: string) {
         return (await backendRequest(`app://playlistItems/${playlistID}`)).split(" ");
     },
-    albumUpdate: async function (albumID: string, data: any) {
-        await backendRequest(`app://albumUpdate/${albumID}`, JSON.stringify(data))
+    albumUpdate: async function (albumID: string, data: RecursivePartial<AlbumMeta>) {
+        await backendRequest(`app://albumUpdate/${albumID}`, JSON.stringify(data));
     },
-    artistUpdate: async function (artistID: string, data: any) {
-        await backendRequest(`app://artistUpdate/${artistID}`, JSON.stringify(data))
+    artistUpdate: async function (artistID: string, data: RecursivePartial<ArtistMeta>) {
+        await backendRequest(`app://artistUpdate/${artistID}`, JSON.stringify(data));
     },
-    trackUpdate: async function (trackID: string, data: any) {
-        await backendRequest(`app://trackUpdate/${trackID}`, JSON.stringify(data))
+    trackUpdate: async function (trackID: string, data: RecursivePartial<TrackMeta>) {
+        await backendRequest(`app://trackUpdate/${trackID}`, JSON.stringify(data));
     },
-    playlistUpdate: async function (playlistID: string, data: any) {
-        await backendRequest(`app://playlistUpdate/${playlistID}`, JSON.stringify(data))
+    playlistUpdate: async function (playlistID: string, data: RecursivePartial<PlaylistMeta>) {
+        await backendRequest(`app://playlistUpdate/${playlistID}`, JSON.stringify(data));
     },
 };
 
@@ -259,6 +286,50 @@ queueTabButton.addEventListener("click", ev => {
     trackHistoryList.style.display = "none";
 });
 
+async function incrementPlays(trackID: string) {
+    const { plays_skips } = await request.trackMeta(trackID);
+
+    const now = dateToInt(new Date());
+
+    const update: RecursivePartial<TrackMeta> = {
+        plays_skips: {
+            date_last_played: now,
+            play_count: plays_skips.play_count + 1,
+            true_play_count: plays_skips.true_play_count + 1,
+        }
+    };
+
+    if (plays_skips.date_first_played === 0) {
+        // @ts-ignore
+        update.plays_skips.date_first_played = now;
+        console.log(`first play ${now}`);
+    }
+
+    await request.trackUpdate(trackID, update);
+
+    // @ts-ignore
+    console.log(`${trackID} incremented plays to ${update.plays_skips.play_count} (true ${update.plays_skips.true_play_count}), last played ${update.plays_skips.date_last_played}`);
+}
+
+async function incrementSkips(trackID: string) {
+    const { plays_skips } = await request.trackMeta(trackID);
+
+    const now = dateToInt(new Date());
+
+    const update: RecursivePartial<TrackMeta> = {
+        plays_skips: {
+            date_last_skipped: now,
+            skip_count: plays_skips.skip_count + 1,
+            true_skip_count: plays_skips.true_skip_count + 1,
+        }
+    };
+
+    await request.trackUpdate(trackID, update);
+
+    // @ts-ignore
+    console.log(`${trackID} incremented skips to ${update.plays_skips.skip_count} (true ${update.plays_skips.true_skip_count}), last skipped ${update.plays_skips.date_last_skipped}`);
+}
+
 async function switchTrack(trackID: string) {
     if (!trackID) {
         // e.g. undefined for out-of-bounds index, i.e. empty track queue, reaching the end, or skipping backwards beyond the start
@@ -271,11 +342,24 @@ async function switchTrack(trackID: string) {
         return;
     }
 
-    if (currentAudio.src === customSrc.trackFile(trackID)) {
+    if (trackNowPlaying === trackID) {
         return; // already playing the specified track, don't switch because that causes it to stop playing
     }
+    if (trackNowPlaying !== null) {
+        await addTrackHistory(trackNowPlaying);
 
-    await addTrackHistory(trackID);
+        const playFraction = currentAudio.currentTime / currentAudio.duration;
+
+        if (playFraction <= 0.2) {
+            // count a skip
+            await incrementSkips(trackNowPlaying);
+        } else if (playFraction >= 0.8) {
+            // count a play
+            await incrementPlays(trackNowPlaying);
+        }
+
+    }
+    trackNowPlaying = trackID;
 
     if (trackIndex > MAX_BACKWARDS_QUEUE) {
         trackQueue.splice(0, trackIndex - MAX_BACKWARDS_QUEUE);
@@ -507,6 +591,8 @@ currentAudio.addEventListener("ended", ev => {
     // todo increment play count
     if (repeat === RepeatSetting.ONE) {
         currentAudio.play(); // restart playback
+        // @ts-ignore
+        incrementPlays(trackNowPlaying); // no switchTrack so this needs to be explicitly done here
     } else {
         nextTrack();
     }

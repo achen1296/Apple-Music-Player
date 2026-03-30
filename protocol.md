@@ -54,6 +54,6 @@ If any modification is made, the library file will be saved once the program is 
 
 Pathname: Item ID
 
-Body: JSON string to decode and pass to `Section.update` in the backend (pass dates as integers). Should be mostly intuitive if you understand the library structure; note that `BinaryObjectParentSection` override this method, which applies to all 4 of these item types. Example: to update a track's play count to 5, use `{ "plays_skips": { "play_count": 5 } }`. (In this case, should also increment `true_play_count`.)
+Body: JSON string to decode and pass to `Section.update` in the backend (pass dates as integers). Should be mostly intuitive if you understand the library structure; note that `BinaryObjectParentSection` overrides this method, which applies to all 4 of these item types. Example: to update a track's play count to 5, use `{ "plays_skips": { "play_count": 5 } }`. (In this case, should also increment `true_play_count`.)
 
 Returns: Nothing

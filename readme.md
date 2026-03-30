@@ -14,7 +14,7 @@ Obviously, the reason why I wanted to make this alternative GUI at all is to add
 
 ## Additional Features
 
-- (todo) It is much faster to change a song's playlist memberships, especially multiple, with a different UI for this — just click on the checkbox.
+- (todo) It is much faster to change a track's playlist memberships, especially multiple, with a different UI for this — just click on the checkbox.
 - (todo) I will call this one "Semi-smart Playlists": Smart playlists where you can manually add additional tracks not meeting the smart criteria, and also manually remove tracks that do meet the criteria. Thus "semi-smart" because they are both smart and manually changed like normal playlists. (Internally, to maintain partial compatibility with the official program, this is implemented by adding a new playlist for the manual additions, another for the manual removals, moving all of them into a folder for organization, and then changing the smart playlist conditions to be: (<\original conditions\> OR track is in manual additions) AND track is not in manual removals]. You could of course do this directly in the official program, mine just makes it easier.)
 - Being able to control the playback speed (which is conveniently another thing a web app can do natively).
 - (todo) Being able to pitch shift.
@@ -29,22 +29,39 @@ Experimentally in the official program, the play count increments when:
 - OR:
   - The skip forward button is pressed OR another track is played
   - AND playback position is within the last 10 seconds
-  - AND playback position is within the last ~60% of the song's duration (reducing the window to count as a play for very short tracks)
+  - AND playback position is within the last ~60% of the track's duration (reducing the window to count as a play for very short tracks)
 
 The skip count increments when:
 
 - The skip forward button is pressed OR another track is played
 - AND playback position is within the first 20 seconds
-- AND playback position is _not_ within the first 2 seconds (presumably so that it doesn't count as a skip unless you have actually heard a little bit of the song and actively decided to skip it rather than just jumping ahead a lot)
+- AND playback position is _not_ within the first 2 seconds (presumably so that it doesn't count as a skip unless you have actually heard a little bit of the track and actively decided to skip it rather than just jumping ahead a lot)
 - AND the track is _not_ less than 20 seconds long
 
 Note that this means:
 
-- Yes, short enough tracks simply CANNOT have their skip count incremented; I do have some this short in my own library with non-zero skip count, but they are all songs added when I was still using iTunes, so I assume the count is inherited from that program which had different rules
+- Yes, short enough tracks simply CANNOT have their skip count incremented; I do have some this short in my own library with non-zero skip count, but they are all tracks added when I was still using iTunes, so I assume the count is inherited from that program which had different rules
 - Neither is incremented when pressing the skip backward button, no matter what
 - Neither is incremented when skipping forward/switching tracks in the middle part between first 20 s and last 60%/last 10 s
+- I haven't checked if this accounts for custom start/end playback positions, but I assume it does
 
-In my program... (todo)
+In my program, I simplified this (primarily out of laziness, and partly because it just matches my personal definitions of a "play"/a "skip" better).
+
+The play count increments when:
+
+- Switching to another track for any reason — even including skipping backward
+- AND playback position is within the last 20% of the track
+
+The skip count increments when:
+
+- Switching to another track for any reason
+- AND playback position is within the first 20% of the track
+
+Therefore:
+
+- Neither is incremented when in the middle 60% of the track
+
+Note: Pressing skip backward in the official program will rewind to the beginning of the current track if not within the first few seconds, and will only actually go the previous track if already within the first few seconds. I never had a use for that, so my skip backward always just goes to the previous track. This is easier to code — no special case, and also doesn't overwrite the playback position, so it can be used for the above (otherwise you'd always be skipping backward from the start).
 
 ### Track Queue/Shuffle and Repeat
 
@@ -52,13 +69,13 @@ What exactly does shuffle do in Apple Music? I refer to both albums and playlist
 
 It is worth noting that the way these behave seemingly don't expect there to be more than one copy of each track in the list (only possible for playlists; the official program GUI tries to get you not to do this by showing a warning when adding a duplicate to a playlist, but it is still allowed).
 
-When shuffling, the entire current album/playlist (henceforth just called "the list") except for the song currently playing is shuffled into the queue, even tracks that are before the current one, and including as many copies of each track as were present in the list multiple times. When repeating, no song may repeat again until the entire list has been exhausted -- in other words, the list is sampled WITHOUT replacement until it is empty, and then it is refilled, rather than simply being sampled WITH replacement.
+When shuffling, the entire current album/playlist (henceforth just called "the list") except for the track currently playing is shuffled into the queue, even tracks that are before the current one, and including as many copies of each track as were present in the list multiple times. When repeating, no track may repeat again until the entire list has been exhausted -- in other words, the list is sampled WITHOUT replacement until it is empty, and then it is refilled, rather than simply being sampled WITH replacement.
 
 I have decided to make my program behave differently in the following ways:
 
 - In general, I implemented the track queue whatever way was simplest, so there are definitely subtle differences between my implementation and the official application's, but I also can't imagine anyone caring.
-- When repeating only one song, both skip buttons will just jump to the beginning in the official program. In my program, they will switch songs as normal. The repeat setting only affects the song ending naturally by playing.
-- To complement this: When repeating only one song, Apple Music changes the queue to display only that song many times. I decided I would rather still display the queue of other songs, making it easier to switch songs from the queue (e.g. if you want a random sample by having shuffle on) without toggling the repeat mode.
+- When repeating only one track, both skip buttons will just jump to the beginning in the official program. In my program, they will switch tracks as normal. The repeat setting only affects the track ending naturally by playing.
+- To complement this: When repeating only one track, Apple Music changes the queue to display only that track many times. I decided I would rather still display the queue of other tracks, making it easier to switch tracks from the queue (e.g. if you want a random sample by having shuffle on) without toggling the repeat mode.
 
 ## Omitted Features
 
