@@ -285,12 +285,7 @@ def handle_request(parsed_url: ParseResultBytes, body: bytes | None) -> bytes:
     return result
 
 
-DEBUG_LOG: Final[bool] = True
-
-log_file = None
-if DEBUG_LOG:
-    log_file = open("backend_log.txt", "w")
-    sys.stdout = log_file
+DEBUG_OUT: Final[bool] = True
 
 
 def main(port: int):
@@ -300,7 +295,7 @@ def main(port: int):
 
     while True:
         received = socket.recv()
-        if DEBUG_LOG:
+        if DEBUG_OUT:
             print("recv:", received)
 
         split_result = received.split(b" ", 1)
@@ -317,14 +312,10 @@ def main(port: int):
         except Exception:
             response = f"error {traceback.format_exc()}".encode()  # send entire traceback to the main process console
 
-        if DEBUG_LOG:
+        if DEBUG_OUT:
             print("send:", response)
             print()
         socket.send(response)
-
-        if DEBUG_LOG:
-            assert log_file
-            log_file.flush()
 
         if parsed_url.hostname and b"update" in parsed_url.hostname:
             # do this AFTER sending the response back to avoid adding this delay to the GUI

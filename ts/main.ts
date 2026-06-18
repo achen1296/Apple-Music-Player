@@ -50,6 +50,19 @@ function spawnBackend() {
     if (!childProcess) {
         throw Error("couldn't spawn backend child process");
     }
+
+    childProcess.stdout?.on('data', (data) => {
+        console.log(data.toString());
+    });
+
+    childProcess.stderr?.on('data', (data) => {
+        console.error(data.toString());
+    });
+
+    childProcess.on("exit", (code) => {
+        console.log(`child process exited with code ${code}`);
+        app.quit();
+    });
 }
 
 function killBackend() {
