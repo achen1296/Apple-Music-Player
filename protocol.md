@@ -1,6 +1,6 @@
 # Communication Protocol Between Electron JS Frontend and Python Backend
 
-Using ZeroMQ to communicate over TCP sockets. This application isn't _that_ complicated and it doesn't require amazing performance for communication with the backend, so I decided to just make a simple protocol myself (that is, without any additional libraries).
+Using ZeroMQ to communicate over TCP sockets. This application isn't _that_ complicated and it doesn't require amazing performance for communication with the backend, so I decided to just make a simple protocol myself (that is, without any additional libraries). (Not over standard I/O because that makes it hard to overlap requests.)
 
 Requests may be made from the frontend either through the app:// custom protocol, or directly by using `backendRequest()` (sends request as a URL anyway to match the app:// protocol for simplicity).
 

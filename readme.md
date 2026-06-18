@@ -1,5 +1,9 @@
 See also the readme for the Apple-Music-Editor repo, which this one uses as a submodule. This readme discusses the player interface itself.
 
+Build: `npx tsc`
+
+Run: `npm run electron`
+
 # Why Python + Electron?
 
 I had already written the editor backend in Python (as my go-to language) when I decided to create an alternative player GUI. While researching GUI options, the automatic and simple-to-implement audio support offered by Chromium via Electron was appealing. Add on that I have been wanting to learn more about HTML/CSS/JavaScript development and it seemed like a good choice. It's also good that this will hopefully make it cross-platform.
