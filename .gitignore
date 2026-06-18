@@ -2,3 +2,4 @@ node_modules
 !**/*.json
 **/*.js
 backend_log.txt
+settings.json

@@ -7,13 +7,13 @@ from collections.abc import Callable
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Final
-from urllib.parse import ParseResultBytes, urlparse
+from urllib.parse import ParseResultBytes, unquote, urlparse
 
 import zmq
 
 from library_musicdb import Library, LibrarySearcher, Section
 
-LIBRARY = Library()  # todo give the user a way to specify a non-default path
+LIBRARY = Library()
 
 
 def flip_hex_endianness[T: str | bytes](hex: T) -> T:
@@ -110,10 +110,36 @@ def playlist_items(parsed_url: ParseResultBytes, body: bytes | None):
     )
 
 
+with open("settings.json") as f:
+    s = json.load(f)
+    REMAP_PATHS: dict[Path, Path] = {
+        Path(k): Path(v)
+        for k, v in s["remap paths"].items()
+    }
+
+
+def _remap_path(path: Path):
+    if path in REMAP_PATHS:
+        return REMAP_PATHS[path]
+    for p in path.parents:
+        if p in REMAP_PATHS:
+            return REMAP_PATHS[p] / path.relative_to(p)
+
+
 def track_file(parsed_url: ParseResultBytes, body: bytes | None):
     id = hex_to_id(parsed_url.path.removeprefix(b"/"))
     track = LIBRARY.track_by_id(id)
-    return track.get_sub_string("url")
+    # path is also stored but seemingly not kept up-to-date
+    # but we are assuming that all URLs represent local files
+    url = track.get_sub_string("url")
+    if not url.startswith("file://"):
+        raise Exception(f"{url} is not a local file")
+    path = _remap_path(
+        Path(
+            unquote(url.removeprefix("file://").removeprefix("localhost/"))
+        )
+    )
+    return str(path)
 
 
 assert LIBRARY.file
@@ -128,14 +154,15 @@ def artwork(parsed_url: ParseResultBytes, body: bytes | None):
     if id >= 1 << 63:
         id -= 1 << 64
 
-    cursor = ARTWORK_DB.cursor()
-    if result := cursor.execute("select artwork_id from item_to_artwork where item_id = ? ", [id]).fetchone():
+    if result := ARTWORK_DB.execute("select artwork_id from item_to_artwork where item_id = ? ", [id]).fetchone():
         artwork_id = result[0]
 
-        if result := cursor.execute("select size_kind, extension from cache_items where artwork_id = ?", [artwork_id]).fetchone():
+        if result := ARTWORK_DB.execute("select size_kind, extension from cache_items where artwork_id = ?", [artwork_id]).fetchone():
             size_kind, extension = result
 
-            return str(ARTWORK_FOLDER / f"{artwork_id}_sk{size_kind}.{extension}")
+            return str(
+                ARTWORK_FOLDER / f"{artwork_id}_sk{size_kind}.{extension}"
+            )
 
     return "assets/default_artwork.png"
 

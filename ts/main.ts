@@ -114,10 +114,8 @@ app.whenReady().then(() => {
             });
         }
 
-        if (host === "trackFile") {
+        if (host === "trackFile" || host === "artwork") {
             // already stored as a file:// URL
-            return net.fetch(response.toString());
-        } else if (host === "artwork") {
             return net.fetch(pathToFileURL(response.toString()).toString());
         } else {
             return new Response(response, {
@@ -132,6 +130,7 @@ app.whenReady().then(() => {
             createWindow();
         }
     });
+
 });
 
 app.on("window-all-closed", () => {
