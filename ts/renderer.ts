@@ -110,6 +110,7 @@ const volumeText = document.getElementById("volumeText") as HTMLSpanElement;
 
 const playRateSlider = document.getElementById("playRateSlider") as HTMLInputElement;
 const playRateText = document.getElementById("playRateText") as HTMLSpanElement;
+const preservePitchCheckbox = document.getElementById("preservePitchCheckbox") as HTMLInputElement;
 
 const historyTabButton = document.getElementById("historyTabButton") as HTMLButtonElement;
 const queueTabButton = document.getElementById("queueTabButton") as HTMLButtonElement;
@@ -590,6 +591,7 @@ skipNextButton.addEventListener("click", ev => nextTrack());
 currentAudio.addEventListener("ended", ev => {
     // todo increment play count
     if (repeat === RepeatSetting.ONE) {
+        currentAudio.src = currentAudio.src;
         currentAudio.play(); // restart playback
         // @ts-ignore
         incrementPlays(trackNowPlaying); // no switchTrack so this needs to be explicitly done here
@@ -616,6 +618,11 @@ playRateSlider.addEventListener("input", ev => {
     currentAudio.playbackRate = playRate;
     // number of decimal digits matches slider step 0.1
     playRateText.innerText = `${playRate.toFixed(1)}x speed`;
+});
+
+currentAudio.preservesPitch = preservePitchCheckbox.checked;
+preservePitchCheckbox.addEventListener("change", ev => {
+    currentAudio.preservesPitch = preservePitchCheckbox.checked;
 });
 
 // album and playlist lists
