@@ -616,8 +616,8 @@ volumeSlider.addEventListener("input", ev => {
 playRateSlider.addEventListener("input", ev => {
     const playRate = Number(playRateSlider.value);
     currentAudio.playbackRate = playRate;
-    // number of decimal digits matches slider step 0.1
-    playRateText.innerText = `${playRate.toFixed(1)}x speed`;
+    // number of decimal digits matches slider step
+    playRateText.innerText = `${playRate.toFixed(2)}x speed`;
 });
 
 currentAudio.preservesPitch = preservePitchCheckbox.checked;
