@@ -343,10 +343,7 @@ async function switchTrack(trackID: string) {
         return;
     }
 
-    if (trackNowPlaying === trackID) {
-        return; // already playing the specified track, don't switch because that causes it to stop playing
-    }
-    if (trackNowPlaying !== null) {
+    if (trackNowPlaying) {
         await addTrackHistory(trackNowPlaying);
 
         const playFraction = currentAudio.currentTime / currentAudio.duration;
@@ -360,6 +357,9 @@ async function switchTrack(trackID: string) {
         }
 
     }
+
+    const wasPaused = currentAudio.paused;
+
     trackNowPlaying = trackID;
 
     if (trackIndex > MAX_BACKWARDS_QUEUE) {
@@ -369,8 +369,12 @@ async function switchTrack(trackID: string) {
     }
 
     currentAudio.src = customSrc.trackFile(trackID);
-
     currentAudio.playbackRate = Number(playRateSlider.value); // this isn't remembered automatically (unlike volume)
+    if (!wasPaused) {
+        // seems necessary if set to same track that was already playing
+        // which can be either repeat one, or on list repeat when it happens to draw the last played song again as the first in the repeat
+        currentAudio.play();
+    }
 
     currentTrackImage.src = customSrc.artwork(trackID);
 
@@ -572,11 +576,11 @@ playTimeSlider.addEventListener("input", ev => {
 });
 
 playTimeSlider.addEventListener("change", ev => {
+    inputtingOnPlayTimeSlider = false;
+    currentAudio.currentTime = Number(playTimeSlider.value);
     if (!audioWasPausedBeforeSeek) {
         currentAudio.play(); // resume if was playing before
     }
-    inputtingOnPlayTimeSlider = false;
-    currentAudio.currentTime = Number(playTimeSlider.value);
 });
 
 currentAudio.addEventListener("durationchange", ev => {
@@ -591,10 +595,7 @@ skipNextButton.addEventListener("click", ev => nextTrack());
 currentAudio.addEventListener("ended", ev => {
     // todo increment play count
     if (repeat === RepeatSetting.ONE) {
-        currentAudio.src = currentAudio.src;
-        currentAudio.play(); // restart playback
-        // @ts-ignore
-        incrementPlays(trackNowPlaying); // no switchTrack so this needs to be explicitly done here
+        switchTrack(trackNowPlaying as string);
     } else {
         nextTrack();
     }
