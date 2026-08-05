@@ -345,17 +345,23 @@ async function switchTrack(trackID: string) {
     await refillTrackQueue();
 }
 
-async function initializeShuffledQueue(currentTrackID: string) {
-    // discard track queue except for the current one
-    trackQueue = [currentTrackID];
+async function initializeShuffledQueue(currentTrackID: string | null) {
+    // discard track queue except for the current track if any
+    // e.g. null for starting playback from the list of playlists/albums, non-null for enabling shuffle while already playing
+    trackQueue = [];
+    if (currentTrackID) {
+        trackQueue.push(currentTrackID);
+    }
     trackIndex = 0;
 
     // reset the sample
     trackSourceListShufflePopulation = [...trackSourceList];
-    // except discard one copy of the current song
-    const i = trackSourceListShufflePopulation.findIndex(t => t === trackQueue[trackIndex]);
-    if (i > 0) {
-        trackSourceListShufflePopulation.splice(i, 1);
+    // except discard one copy of the current song if any
+    if (currentTrackID) {
+        const i = trackSourceListShufflePopulation.findIndex(t => t === currentTrackID);
+        if (i > 0) {
+            trackSourceListShufflePopulation.splice(i, 1);
+        }
     }
 
     trackQueueList.replaceChildren();
@@ -410,7 +416,7 @@ function switchTrackSourceList(newTrackSourceList: string[], startIndex = 0) {
     trackSourceList = newTrackSourceList.filter(i => i); // remove empty strings from splitting e.g. "".split(" ") -> [""]
 
     if (shuffle) {
-        initializeShuffledQueue(trackSourceList[startIndex]);
+        initializeShuffledQueue(null);
     } else {
         initializeUnshuffledQueue(trackSourceList[startIndex]);
     }
