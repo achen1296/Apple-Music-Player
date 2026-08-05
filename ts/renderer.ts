@@ -1,6 +1,16 @@
 "use strict";
 
+type Settings = {
+    repeatOne: boolean,
+    shuffle: boolean,
+    volume: number,
+    playRate: number,
+    preservePitch: boolean,
+};
+
 declare function backendRequest(url: string, body?: string): Promise<string>;
+declare function loadSettings(): Promise<any>;
+declare function saveSettings(settings: any): Promise<void>;
 
 function dateToInt(date: Date) {
     // .valueOf is in milliseconds, but only stored as integer seconds in library
@@ -119,9 +129,6 @@ const queueTabButton = document.getElementById("queueTabButton") as HTMLButtonEl
 const trackHistoryList = document.getElementById("trackHistoryList") as HTMLUListElement;
 const trackQueueList = document.getElementById("trackQueueList") as HTMLUListElement;
 
-let repeatOne = false;
-let shuffle = false;
-
 /** Maximum length of trackHistory to keep. Actually, I store a count as well as the ID so that repeating the same song many times doesn't fill up the history. */
 const MAX_HISTORY = 50;
 const trackHistory: [string, number][] = [];
@@ -151,6 +158,17 @@ const MAX_FORWARD_QUEUE = 20;
  * */
 let trackQueue: string[] = [];
 let trackIndex = 0;
+
+let settings: Settings;
+(async () => {
+    settings = await loadSettings();
+    // do not bother to save on initial load
+    setRepeatOne(settings.repeatOne ?? false, false);
+    setShuffle(settings.shuffle ?? false, false);
+    setVolume(settings.volume ?? 1.0, false);
+    setPlayRate(settings.playRate ?? 1.0, false);
+    setPreservePitch(settings.preservePitch ?? false, false);
+})();
 
 function trackOneLineDescription({ name, album, artist }: { name: string, album: string, artist: string }): string {
     return `${name}${album ? ` from ${album}` : ""}${artist ? ` by ${artist}` : ""}`;
@@ -211,7 +229,7 @@ async function refillTrackQueue() {
         });
     }
 
-    if (shuffle) {
+    if (settings.shuffle) {
         // random sample without replacement until empty
         while (trackQueue.length - (trackIndex + 1) < MAX_FORWARD_QUEUE) {
             if (trackSourceListShufflePopulation.length === 0) {
@@ -382,12 +400,16 @@ async function initializeShuffledQueue(currentTrackID: string | null) {
     await refillTrackQueue();
 }
 
-function enableShuffle() {
-    shuffle = true;
+function enableShuffle(save = true) {
+    settings.shuffle = true;
 
     shuffleButton.classList.add("buttonPressed");
 
     initializeShuffledQueue(trackQueue[trackIndex] as string);
+
+    if (save) {
+        saveSettings(settings);
+    }
 }
 
 async function initializeUnshuffledQueue(currentTrackID: string) {
@@ -410,26 +432,38 @@ async function initializeUnshuffledQueue(currentTrackID: string) {
     await refillTrackQueue();
 }
 
-function disableShuffle() {
-    shuffle = false;
+function disableShuffle(save = true) {
+    settings.shuffle = false;
 
     shuffleButton.classList.remove("buttonPressed");
 
     initializeUnshuffledQueue(trackQueue[trackIndex] as string);
+
+    if (save) {
+        saveSettings(settings);
+    }
 }
 
-function toggleShuffle() {
-    if (shuffle) {
-        disableShuffle();
+function toggleShuffle(save = true) {
+    if (settings.shuffle) {
+        disableShuffle(save);
     } else {
-        enableShuffle();
+        enableShuffle(save);
+    }
+}
+
+function setShuffle(s: boolean, save = true) {
+    if (s) {
+        enableShuffle(save);
+    } else {
+        disableShuffle(save);
     }
 }
 
 function switchTrackSourceList(newTrackSourceList: string[], startIndex = 0) {
     trackSourceList = newTrackSourceList.filter(i => i); // remove empty strings from splitting e.g. "".split(" ") -> [""]
 
-    if (shuffle) {
+    if (settings.shuffle) {
         initializeShuffledQueue(null);
         nextTrack();
     } else {
@@ -470,16 +504,41 @@ function nextTrack() {
 
 shuffleButton.addEventListener("click", ev => toggleShuffle());
 
-repeatButton.addEventListener("click", async ev => {
-    if (repeatOne) {
-        repeatOne = false;
-        repeatButton.classList.remove("buttonPressed");
+
+function disableRepeatOne(save = true) {
+    settings.repeatOne = false;
+    repeatButton.classList.remove("buttonPressed");
+
+    if (save) {
+        saveSettings(settings);
     }
-    else {
-        repeatOne = true;
-        repeatButton.classList.add("buttonPressed");
+}
+
+function enableRepeatOne(save = true) {
+    settings.repeatOne = true;
+    repeatButton.classList.add("buttonPressed");
+
+    if (save) {
+        saveSettings(settings);
     }
-});
+}
+
+function toggleRepeatOne(save = true) {
+    if (settings.repeatOne) {
+        disableRepeatOne(save);
+    } else {
+        enableRepeatOne(save);
+    }
+}
+function setRepeatOne(r: boolean, save = true) {
+    if (r) {
+        enableRepeatOne(save);
+    } else {
+        disableRepeatOne(save);
+    }
+}
+
+repeatButton.addEventListener("click", async ev => toggleRepeatOne());
 
 const SECONDS_FORMAT = Intl.NumberFormat(undefined, {
     minimumIntegerDigits: 2
@@ -537,7 +596,7 @@ skipPreviousButton.addEventListener("click", ev => previousTrack());
 skipNextButton.addEventListener("click", ev => nextTrack());
 
 currentAudio.addEventListener("ended", ev => {
-    if (repeatOne) {
+    if (settings.repeatOne) {
         switchTrack(trackNowPlaying as string);
     } else {
         nextTrack();
@@ -552,22 +611,41 @@ playPauseButton.addEventListener("click", ev => {
     }
 });
 
-volumeSlider.addEventListener("input", ev => {
-    currentAudio.volume = Number(volumeSlider.value) / 100;
+function setVolume(volume: number, save = true) {
+    settings.volume = volume;
+    currentAudio.volume = volume;
     volumeText.innerText = `${volumeSlider.value}% volume`;
-});
 
-playRateSlider.addEventListener("input", ev => {
-    const playRate = Number(playRateSlider.value);
+    if (save) {
+        saveSettings(settings);
+    }
+}
+
+volumeSlider.addEventListener("input", ev => setVolume(Number(volumeSlider.value) / 100));
+
+function setPlayRate(playRate: number, save = true) {
+    settings.playRate = playRate;
     currentAudio.playbackRate = playRate;
     // number of decimal digits matches slider step
     playRateText.innerText = `${playRate.toFixed(2)}x speed`;
-});
 
-currentAudio.preservesPitch = preservePitchCheckbox.checked;
-preservePitchCheckbox.addEventListener("change", ev => {
-    currentAudio.preservesPitch = preservePitchCheckbox.checked;
-});
+    if (save) {
+        saveSettings(settings);
+    }
+}
+
+playRateSlider.addEventListener("input", ev => setPlayRate(Number(playRateSlider.value)));
+
+function setPreservePitch(p: boolean, save = true) {
+    settings.preservePitch = p;
+    currentAudio.preservesPitch = p;
+
+    if (save) {
+        saveSettings(settings);
+    }
+}
+
+preservePitchCheckbox.addEventListener("change", ev => setPreservePitch(preservePitchCheckbox.checked));
 
 // album and playlist lists
 

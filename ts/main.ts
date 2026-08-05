@@ -3,6 +3,7 @@
 import { ipcMain, net } from "electron";
 import { app, BrowserWindow, protocol } from "electron/main";
 import { ChildProcess, spawn } from "node:child_process";
+import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import * as zmq from "zeromq";
@@ -94,10 +95,21 @@ async function backendRequest(url: string, body?: string) {
     return resultString;
 }
 
+function loadSettings(): any {
+    let data: string = readFileSync("settings.json").toString();
+    return JSON.parse(data as string);
+}
+
+function saveSettings(settings: any) {
+    writeFileSync("settings.json", JSON.stringify(settings));
+}
+
 app.whenReady().then(() => {
     spawnBackend();
 
     ipcMain.handle("backendRequest", (ev, url: string, body?: string) => backendRequest(url, body));
+    ipcMain.handle("loadSettings", (ev) => loadSettings());
+    ipcMain.handle("saveSettings", (ev, settings: Object) => saveSettings(settings));
 
     createWindow();
 
