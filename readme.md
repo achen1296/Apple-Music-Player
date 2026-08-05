@@ -78,7 +78,8 @@ When shuffling, the entire current album/playlist (henceforth just called "the l
 I have decided to make my program behave differently in the following ways:
 
 - In general, I implemented the track queue whatever way was simplest, so there are definitely subtle differences between my implementation and the official application's, but I also can't imagine anyone caring.
-- When repeating only one track, both skip buttons will just jump to the beginning in the official program. In my program, they will switch tracks as normal. The repeat setting only affects the track ending naturally by playing.
+- The mode for not repeating anything is removed. I personally never used it. So the repeat button only toggles between that and repeating one track.
+- When repeating one track, both skip buttons will just jump to the beginning in the official program. In my program, they will switch tracks as normal because I found this extremely useless. The repeat setting only affects the track ending naturally by playing.
 - To complement this: When repeating only one track, Apple Music changes the queue to display only that track many times. I decided I would rather still display the queue of other tracks, making it easier to switch tracks from the queue (e.g. if you want a random sample by having shuffle on) without toggling the repeat mode.
 
 ## Omitted Features

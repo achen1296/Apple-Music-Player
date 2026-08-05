@@ -118,13 +118,7 @@ const queueTabButton = document.getElementById("queueTabButton") as HTMLButtonEl
 const trackHistoryList = document.getElementById("trackHistoryList") as HTMLUListElement;
 const trackQueueList = document.getElementById("trackQueueList") as HTMLUListElement;
 
-enum RepeatSetting {
-    NONE,
-    ALL,
-    ONE,
-};
-let repeat = RepeatSetting.NONE;
-
+let repeatOne = false;
 let shuffle = false;
 
 /** Maximum length of trackHistory to keep. Actually, I store a count as well as the ID so that repeating the same song many times doesn't fill up the history. */
@@ -143,9 +137,8 @@ let trackSourceListNext = 0;
 
 /** Maximum length of `trackQueue` to remember before `trackIndex`. Can be larger because it's not shown anywhere on the GUI. */
 const MAX_BACKWARDS_QUEUE = 100;
-/** Maximum length of `trackQueue` to calculate and display in advance, not including `REPEAT_MARKER`, and not including elements before `trackIndex`. (The user may manually add more tracks up next than this and they won't be actively discarded. The forward queue can also grow by skipping backwards a lot.) */
+/** Maximum length of `trackQueue` to calculate and display in advance, not including elements before `trackIndex`. (The user may manually add more tracks up next than this and they won't be actively discarded. The forward queue can also grow by skipping backwards a lot.) */
 const MAX_FORWARD_QUEUE = 20;
-const REPEAT_MARKER = Symbol();
 /**
  * Before `trackIndex`: tracks that will play when skipping backwards
  *
@@ -154,18 +147,16 @@ const REPEAT_MARKER = Symbol();
  * After `trackIndex`: up next
  *
  * Note that skipping backwards does not use the play history -- for example, when starting playback in the middle of a list that is not shuffled. Also, tracks may be added by the user to play next, so they may not necessarily be part of the `trackSourceList`.
- *
- * The symbol `REPEAT_MARKER` is used to mark the point where a repeat of all tracks occurred. Therefore, if repeat is turned off, everything after the first appearance of `REPEAT_MARKER` is discarded from the queue.
  * */
-let trackQueue: (string | typeof REPEAT_MARKER)[] = [];
+let trackQueue: string[] = [];
 let trackIndex = 0;
 
 function trackOneLineDescription({ name, album, artist }: { name: string, album: string, artist: string }): string {
     return `${name}${album ? ` from ${album}` : ""}${artist ? ` by ${artist}` : ""}`;
 }
 
-async function addTrackHistory(trackID: string | typeof REPEAT_MARKER) {
-    if (!trackID || trackID === REPEAT_MARKER) {
+async function addTrackHistory(trackID: string) {
+    if (!trackID) {
         return;
     }
 
@@ -200,25 +191,9 @@ async function addTrackHistory(trackID: string | typeof REPEAT_MARKER) {
     }
 }
 
-function queueLengthNoRepeatMarker(start = 0, end?: number) {
-    if (end === undefined) {
-        end = trackQueue.length;
-    }
-    let markerCount = 0;
-    for (let i = start; i < end; i++) {
-        if (trackQueue[i] === REPEAT_MARKER) {
-            markerCount++;
-        }
-    }
-    return end - start - markerCount;
-}
-
 async function refillTrackQueue() {
-    async function pushQueue(trackID: string | typeof REPEAT_MARKER) {
+    async function pushQueue(trackID: string) {
         trackQueue.push(trackID);
-        if (trackID === REPEAT_MARKER) {
-            return;
-        }
 
         const li = trackQueueList.appendChild(document.createElement("li"));
         const trackMeta = await request.trackMeta(trackID);
@@ -226,15 +201,8 @@ async function refillTrackQueue() {
         // jump ahead to the item that was clicked
         li.addEventListener("click", ev => {
             while (trackQueueList.firstElementChild && trackQueueList.firstElementChild !== li) {
-                while (trackQueue[trackIndex] === REPEAT_MARKER) {
-                    trackIndex++;
-                }
                 trackIndex++;
                 trackQueueList.removeChild(trackQueueList.firstElementChild);
-            }
-            // once more to actually reach the li that was clicked
-            while (trackQueue[trackIndex] === REPEAT_MARKER) {
-                trackIndex++;
             }
             trackIndex++;
             trackQueueList.removeChild(li);
@@ -244,28 +212,18 @@ async function refillTrackQueue() {
 
     if (shuffle) {
         // random sample without replacement until empty
-        while (queueLengthNoRepeatMarker(trackIndex + 1) < MAX_FORWARD_QUEUE) {
+        while (trackQueue.length - (trackIndex + 1) < MAX_FORWARD_QUEUE) {
             if (trackSourceListShufflePopulation.length === 0) {
-                if (repeat === RepeatSetting.ALL) {
-                    // refill
-                    trackSourceListShufflePopulation = [...trackSourceList];
-                    await pushQueue(REPEAT_MARKER);
-                } else {
-                    break;
-                }
+                // refill
+                trackSourceListShufflePopulation = [...trackSourceList];
             }
             const i = Math.floor(Math.random() * trackSourceListShufflePopulation.length);
             await pushQueue(trackSourceListShufflePopulation.splice(i, 1)[0]);
         }
     } else {
-        while (queueLengthNoRepeatMarker(trackIndex + 1) < MAX_FORWARD_QUEUE) {
+        while (trackQueue.length - (trackIndex + 1) < MAX_FORWARD_QUEUE) {
             if (trackSourceListNext >= trackSourceList.length) {
-                if (repeat === RepeatSetting.ALL) {
-                    trackSourceListNext = 0;
-                    await pushQueue(REPEAT_MARKER);
-                } else {
-                    break;
-                }
+                trackSourceListNext = 0;
             }
             await pushQueue(trackSourceList[trackSourceListNext]);
             trackSourceListNext++;
@@ -457,9 +415,6 @@ function switchTrackSourceList(newTrackSourceList: string[], startIndex = 0) {
         initializeUnshuffledQueue(trackSourceList[startIndex]);
     }
 
-    while (trackQueue[trackIndex] === REPEAT_MARKER) {
-        trackIndex++;
-    }
     switchTrack(trackQueue[trackIndex] as string);
 }
 
@@ -470,10 +425,7 @@ async function previousTrack() {
         const trackMeta = await request.trackMeta(trackQueue[trackIndex] as string);
         li.innerText = trackOneLineDescription(trackMeta);
     }
-    do {
-        trackIndex--;
-        // if somehow there are a bunch of REPEAT_MARKER entries at the start of the queue (which shouldn't happen, but just in case), will just stop with the undefined value at -1
-    } while (trackQueue[trackIndex] === REPEAT_MARKER);
+    trackIndex--;
     // clamp to -1, *not* to 0, so that skipping backwards at the start of the queue stops playback (which is how the official program does it, and also this is just less confusing than refusing to go backwards, although another alternative would be to disable the button; but see nextTrack)
     if (trackIndex < -1) {
         trackIndex = -1;
@@ -483,9 +435,7 @@ async function previousTrack() {
 
 function nextTrack() {
     // likewise with previousTrack, except that falling off the end in this direction can be caused by regular playback reaching the end of the queue, and in that case it makes more sense to just stop playing
-    do {
-        trackIndex++;
-    } while (trackQueue[trackIndex] === REPEAT_MARKER);
+    trackIndex++;
     if (trackIndex >= trackQueue.length) {
         trackIndex = trackQueue.length;
     } else {
@@ -498,41 +448,16 @@ function nextTrack() {
     switchTrack(trackQueue[trackIndex] as string);
 }
 
-function discardRepeats() {
-    if (shuffle) {
-        // reset
-        trackSourceListShufflePopulation = [...trackSourceList];
-    }
-
-    // search forward for REPEAT_MARKER and discard starting from there
-    // (not backward)
-    const i = trackQueue.findIndex(t => t === REPEAT_MARKER);
-    if (i >= 0) {
-        trackQueue.splice(i);
-        trackQueueList.replaceChildren(...Array.from(trackQueueList.children).slice(0, i - trackIndex - 1));
-    }
-}
-
 shuffleButton.addEventListener("click", ev => toggleShuffle());
 
 repeatButton.addEventListener("click", async ev => {
-    switch (repeat) {
-        case RepeatSetting.NONE:
-            repeat = RepeatSetting.ALL;
-            repeatButton.classList.add("buttonPressed");
-            await refillTrackQueue();
-            break;
-        case RepeatSetting.ALL:
-            repeat = RepeatSetting.ONE;
-            repeatButton.innerText = "🔂";
-            // only "ended" event is affected by this, nothing to do do here
-            break;
-        case RepeatSetting.ONE:
-            repeat = RepeatSetting.NONE;
-            repeatButton.innerText = "🔁";
-            repeatButton.classList.remove("buttonPressed");
-            discardRepeats();
-            break;
+    if (repeatOne) {
+        repeatOne = false;
+        repeatButton.classList.remove("buttonPressed");
+    }
+    else {
+        repeatOne = true;
+        repeatButton.classList.add("buttonPressed");
     }
 });
 
@@ -589,12 +514,10 @@ currentAudio.addEventListener("durationchange", ev => {
 
 skipPreviousButton.addEventListener("click", ev => previousTrack());
 
-// todo increment skip count
 skipNextButton.addEventListener("click", ev => nextTrack());
 
 currentAudio.addEventListener("ended", ev => {
-    // todo increment play count
-    if (repeat === RepeatSetting.ONE) {
+    if (repeatOne) {
         switchTrack(trackNowPlaying as string);
     } else {
         nextTrack();
