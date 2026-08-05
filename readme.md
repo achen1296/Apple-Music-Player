@@ -21,7 +21,8 @@ Obviously, the reason why I wanted to make this alternative GUI at all is to add
 - (todo) It is much faster to change a track's playlist memberships, especially multiple, with a different UI for this — just click on the checkbox.
 - (todo) I will call this one "Semi-smart Playlists": Smart playlists where you can manually add additional tracks not meeting the smart criteria, and also manually remove tracks that do meet the criteria. Thus "semi-smart" because they are both smart and manually changed like normal playlists. (Internally, to maintain partial compatibility with the official program, this is implemented by adding a new playlist for the manual additions, another for the manual removals, moving all of them into a folder for organization, and then changing the smart playlist conditions to be: (<\original conditions\> OR track is in manual additions) AND track is not in manual removals]. You could of course do this directly in the official program, mine just makes it easier.)
 - Being able to control the playback speed (which is conveniently another thing a web app can do natively).
-- (todo) Being able to pitch shift.
+- Being able to pitch shift.
+- Alerts you when there's an error loading a track's audio file, most likely that it doesn't exist, rather than just silently skipping it like the official program — which means you will never hear that track again unless you specifically try to play that one!
 
 ## Modified Features
 

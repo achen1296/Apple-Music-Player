@@ -25,7 +25,8 @@ type TrackMeta = {
         date_last_skipped: number,
         skip_count: number,
         true_skip_count: number,
-    }
+    },
+    url: string,
 };
 type PlaylistMeta = { name: string };
 
@@ -344,6 +345,17 @@ async function switchTrack(trackID: string) {
 
     await refillTrackQueue();
 }
+
+currentAudio.addEventListener("error", async e => {
+    if (currentAudio.src) { // do not show this when setting to ""
+        let url;
+        if (trackNowPlaying) {
+            url = (await request.trackMeta(trackNowPlaying)).url;
+        }
+        // no useful information in event to show
+        alert(`Error occurred loading track:\n${currentAudio.src}. Does the file exist${url ? " at " + url : ""}?`);
+    }
+});
 
 async function initializeShuffledQueue(currentTrackID: string | null) {
     // discard track queue except for the current track if any
