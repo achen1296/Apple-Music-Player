@@ -363,8 +363,10 @@ async function initializeShuffledQueue(currentTrackID: string | null) {
     trackQueue = [];
     if (currentTrackID) {
         trackQueue.push(currentTrackID);
+        trackIndex = 0;
+    } else {
+        trackIndex = -1;
     }
-    trackIndex = 0;
 
     // reset the sample
     trackSourceListShufflePopulation = [...trackSourceList];
@@ -429,11 +431,11 @@ function switchTrackSourceList(newTrackSourceList: string[], startIndex = 0) {
 
     if (shuffle) {
         initializeShuffledQueue(null);
+        nextTrack();
     } else {
         initializeUnshuffledQueue(trackSourceList[startIndex]);
+        switchTrack(trackQueue[trackIndex] as string);
     }
-
-    switchTrack(trackQueue[trackIndex] as string);
 }
 
 async function previousTrack() {
