@@ -165,9 +165,9 @@ let settings: Settings;
     // do not bother to save on initial load
     setRepeatOne(settings.repeatOne ?? false, false);
     setShuffle(settings.shuffle ?? false, false);
-    setVolume(settings.volume ?? 1.0, false);
-    setPlayRate(settings.playRate ?? 1.0, false);
-    setPreservePitch(settings.preservePitch ?? false, false);
+    setVolume(settings.volume ?? 1.0, false, true);
+    setPlayRate(settings.playRate ?? 1.0, false, true);
+    setPreservePitch(settings.preservePitch ?? false, false, true);
 })();
 
 function trackOneLineDescription({ name, album, artist }: { name: string, album: string, artist: string }): string {
@@ -611,9 +611,12 @@ playPauseButton.addEventListener("click", ev => {
     }
 });
 
-function setVolume(volume: number, save = true) {
+function setVolume(volume: number, save = true, updateGUI=false) {
     settings.volume = volume;
     currentAudio.volume = volume;
+    if (updateGUI) {
+        volumeSlider.value = `${volume * 100}`;
+    }
     volumeText.innerText = `${volumeSlider.value}% volume`;
 
     if (save) {
@@ -623,7 +626,7 @@ function setVolume(volume: number, save = true) {
 
 volumeSlider.addEventListener("input", ev => setVolume(Number(volumeSlider.value) / 100));
 
-function setPlayRate(playRate: number, save = true) {
+function setPlayRate(playRate: number, save = true, updateGUI=false) {
     settings.playRate = playRate;
     currentAudio.playbackRate = playRate;
     // number of decimal digits matches slider step
@@ -632,16 +635,24 @@ function setPlayRate(playRate: number, save = true) {
     if (save) {
         saveSettings(settings);
     }
+
+    if (updateGUI) {
+        playRateSlider.value = `${playRate}`;
+    }
 }
 
 playRateSlider.addEventListener("input", ev => setPlayRate(Number(playRateSlider.value)));
 
-function setPreservePitch(p: boolean, save = true) {
+function setPreservePitch(p: boolean, save = true, updateGUI=false) {
     settings.preservePitch = p;
     currentAudio.preservesPitch = p;
 
     if (save) {
         saveSettings(settings);
+    }
+
+    if (updateGUI) {
+        preservePitchCheckbox.checked = p;
     }
 }
 
