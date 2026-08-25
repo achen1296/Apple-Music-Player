@@ -611,7 +611,7 @@ playPauseButton.addEventListener("click", ev => {
     }
 });
 
-const MIN_VOLUME = 0.001;
+const MIN_VOLUME = 0.005;
 const EXP_FACTOR = Math.log(1 / MIN_VOLUME);
 
 function setVolume(volume: number, save = true, updateGUI = false) {
