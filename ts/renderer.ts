@@ -308,7 +308,7 @@ async function incrementSkips(trackID: string) {
     console.log(`${trackID} incremented skips to ${update.plays_skips.skip_count} (true ${update.plays_skips.true_skip_count}), last skipped ${update.plays_skips.date_last_skipped}`);
 }
 
-async function switchTrack(trackID: string) {
+async function switchTrack(trackID: string | null) {
     if (!trackID) {
         // e.g. undefined for out-of-bounds index, i.e. empty track queue, reaching the end, or skipping backwards beyond the start
         currentAudio.src = "";
@@ -348,7 +348,7 @@ async function switchTrack(trackID: string) {
     currentAudio.src = customSrc.trackFile(trackID);
     currentAudio.playbackRate = Number(playRateSlider.value); // this isn't remembered automatically (unlike volume)
     if (!wasPaused) {
-        // seems necessary if set to same track that was already playing
+        // seems necessary to repeat the same track
         // which can be either repeat one, or on list repeat when it happens to draw the last played song again as the first in the repeat
         currentAudio.play();
     }
@@ -597,7 +597,7 @@ skipNextButton.addEventListener("click", ev => nextTrack());
 
 currentAudio.addEventListener("ended", ev => {
     if (settings.repeatOne) {
-        switchTrack(trackNowPlaying as string);
+        switchTrack(trackNowPlaying);
     } else {
         nextTrack();
     }
@@ -611,9 +611,18 @@ playPauseButton.addEventListener("click", ev => {
     }
 });
 
-function setVolume(volume: number, save = true, updateGUI=false) {
+const MIN_VOLUME = 0.001;
+const EXP_FACTOR = Math.log(1 / MIN_VOLUME);
+
+function setVolume(volume: number, save = true, updateGUI = false) {
     settings.volume = volume;
-    currentAudio.volume = volume;
+    // account for logarithmic human hearing
+    // map 0% to MIN_VOLUME (cannot be 0) and 100% to 1.0
+    // when volume = 0%, Math.exp(0) = 1 hence multiplication by MIN_VOLUME
+    // when volume = 100%, want 1 = MIN_VOLUME * exp(EXP_FACTOR * volume)
+    // 1/MIN_VOLUME = exp(EXP_FACTOR * 1)
+    // ln(1/MIN_VOLUME) = EXP_FACTOR
+    currentAudio.volume = MIN_VOLUME * Math.exp(EXP_FACTOR * volume);
     if (updateGUI) {
         volumeSlider.value = `${volume * 100}`;
     }
@@ -626,7 +635,7 @@ function setVolume(volume: number, save = true, updateGUI=false) {
 
 volumeSlider.addEventListener("input", ev => setVolume(Number(volumeSlider.value) / 100));
 
-function setPlayRate(playRate: number, save = true, updateGUI=false) {
+function setPlayRate(playRate: number, save = true, updateGUI = false) {
     settings.playRate = playRate;
     currentAudio.playbackRate = playRate;
     // number of decimal digits matches slider step
@@ -643,7 +652,7 @@ function setPlayRate(playRate: number, save = true, updateGUI=false) {
 
 playRateSlider.addEventListener("input", ev => setPlayRate(Number(playRateSlider.value)));
 
-function setPreservePitch(p: boolean, save = true, updateGUI=false) {
+function setPreservePitch(p: boolean, save = true, updateGUI = false) {
     settings.preservePitch = p;
     currentAudio.preservesPitch = p;
 
