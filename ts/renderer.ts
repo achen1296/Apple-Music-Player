@@ -48,54 +48,63 @@ type RecursivePartial<T> = {
     T[P];
 };
 
+// backend does not use the scheme part of the URL for anything
 const request = {
     albumList: async function () {
-        return (await backendRequest("app://albumList")).split(" ");
+        return (await backendRequest("//albumList")).split(" ");
     },
     artistList: async function () {
-        return (await backendRequest("app://artistList")).split(" ");
+        return (await backendRequest("//artistList")).split(" ");
     },
     trackList: async function () {
-        return (await backendRequest("app://trackList")).split(" ");
+        return (await backendRequest("//trackList")).split(" ");
     },
     playlistList: async function () {
-        return (await backendRequest("app://playlistList")).split(" ");
+        return (await backendRequest("//playlistList")).split(" ");
     },
     albumMeta: async function (albumID: string): Promise<AlbumMeta> {
-        return JSON.parse(await backendRequest(`app://albumMeta/${albumID}`));
+        return JSON.parse(await backendRequest(`//albumMeta/${albumID}`));
     },
     artistMeta: async function (artistID: string): Promise<ArtistMeta> {
-        return JSON.parse(await backendRequest(`app://artistMeta/${artistID}`));
+        return JSON.parse(await backendRequest(`//artistMeta/${artistID}`));
     },
     trackMeta: async function (trackID: string): Promise<TrackMeta> {
-        return JSON.parse(await backendRequest(`app://trackMeta/${trackID}`));
+        return JSON.parse(await backendRequest(`//trackMeta/${trackID}`));
     },
     playlistMeta: async function (playlistID: string): Promise<PlaylistMeta> {
-        return JSON.parse(await backendRequest(`app://playlistMeta/${playlistID}`));
+        return JSON.parse(await backendRequest(`//playlistMeta/${playlistID}`));
     },
     albumItems: async function (albumID: string) {
-        return (await backendRequest(`app://albumItems/${albumID}`)).split(" ");
+        return (await backendRequest(`//albumItems/${albumID}`)).split(" ");
     },
     playlistItems: async function (playlistID: string) {
-        return (await backendRequest(`app://playlistItems/${playlistID}`)).split(" ");
+        return (await backendRequest(`//playlistItems/${playlistID}`)).split(" ");
     },
     albumUpdate: async function (albumID: string, data: RecursivePartial<AlbumMeta>) {
-        await backendRequest(`app://albumUpdate/${albumID}`, JSON.stringify(data));
+        await backendRequest(`//albumUpdate/${albumID}`, JSON.stringify(data));
     },
     artistUpdate: async function (artistID: string, data: RecursivePartial<ArtistMeta>) {
-        await backendRequest(`app://artistUpdate/${artistID}`, JSON.stringify(data));
+        await backendRequest(`//artistUpdate/${artistID}`, JSON.stringify(data));
     },
     trackUpdate: async function (trackID: string, data: RecursivePartial<TrackMeta>) {
-        await backendRequest(`app://trackUpdate/${trackID}`, JSON.stringify(data));
+        await backendRequest(`//trackUpdate/${trackID}`, JSON.stringify(data));
     },
     playlistUpdate: async function (playlistID: string, data: RecursivePartial<PlaylistMeta>) {
-        await backendRequest(`app://playlistUpdate/${playlistID}`, JSON.stringify(data));
+        await backendRequest(`//playlistUpdate/${playlistID}`, JSON.stringify(data));
     },
 };
 
+// const customSrc = {
+//     trackFile: (trackID: string) => `app://trackFile/${trackID}`,
+//     artwork: (artworkID: string) => `app://artwork/${artworkID}`,
+// };
 const customSrc = {
-    trackFile: (trackID: string) => `app://trackFile/${trackID}`,
-    artwork: (artworkID: string) => `app://artwork/${artworkID}`,
+    trackFile: async function (trackID: string) {
+        return await backendRequest(`//trackFile/${trackID}`);
+    },
+    artwork: async function (artworkID: string) {
+        return await backendRequest(`//artwork/${artworkID}`);
+    },
 };
 
 // player
@@ -313,7 +322,7 @@ async function switchTrack(trackID: string | null) {
         // e.g. undefined for out-of-bounds index, i.e. empty track queue, reaching the end, or skipping backwards beyond the start
         currentAudio.src = "";
         // this should load the default image
-        currentTrackImage.src = customSrc.artwork("00");
+        currentTrackImage.src = await customSrc.artwork("00");
         currentTrackNameText.innerText = "...";
         currentTrackArtistText.innerText = "...";
         currentTrackAlbumText.innerText = "...";
@@ -345,7 +354,7 @@ async function switchTrack(trackID: string | null) {
         // no effect on the display since only removing ones already not shown
     }
 
-    currentAudio.src = customSrc.trackFile(trackID);
+    currentAudio.src = await customSrc.trackFile(trackID);
     currentAudio.playbackRate = Number(playRateSlider.value); // this isn't remembered automatically (unlike volume)
     if (!wasPaused) {
         // seems necessary to repeat the same track
@@ -353,7 +362,7 @@ async function switchTrack(trackID: string | null) {
         currentAudio.play();
     }
 
-    currentTrackImage.src = customSrc.artwork(trackID);
+    currentTrackImage.src = await customSrc.artwork(trackID);
 
     const { name, album, artist } = await request.trackMeta(trackID);
 
@@ -530,6 +539,7 @@ function toggleRepeatOne(save = true) {
         enableRepeatOne(save);
     }
 }
+
 function setRepeatOne(r: boolean, save = true) {
     if (r) {
         enableRepeatOne(save);

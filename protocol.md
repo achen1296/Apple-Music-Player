@@ -2,7 +2,10 @@
 
 Using ZeroMQ to communicate over TCP sockets. This application isn't _that_ complicated and it doesn't require amazing performance for communication with the backend, so I decided to just make a simple protocol myself (that is, without any additional libraries). (Not over standard I/O because that makes it hard to overlap requests.)
 
-Requests may be made from the frontend either through the app:// custom protocol, or directly by using `backendRequest()` (sends request as a URL anyway to match the app:// protocol for simplicity).
+Requests may be made from the frontend ~~either through the app:// custom protocol, or~~ directly by using `backendRequest()` (sends request as a URL anyway to match the app:// protocol for simplicity). I wanted to do this properly according to [Electron docs](https://www.electronjs.org/docs/latest/tutorial/security#18-avoid-usage-of-the-file-protocol-and-prefer-usage-of-custom-protocols) however, this led to some (the majority though not all) audio files having glitches like:
+- not being able to seek
+- not being able to loop
+so I gave up and used the file:// protocol which just works for both of these
 
 An "item" refers to an album, artist, track, or playlist as appropriate from the context.
 

@@ -4,7 +4,7 @@
   "description": "",
   "main": "main.js",
   "scripts": {
-    "electron": "electron ."
+    "electron": "electron --no-sandbox ."
   },
   "author": "Andrew Chen (github.com/achen1296)",
   "license": "MIT",

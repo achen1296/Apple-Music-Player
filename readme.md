@@ -109,4 +109,7 @@ For some combination of the following reasons...:
 
 # Asset Credits
 
-App icon music note: https://thenounproject.com/icon/music-note-61776 https://commons.wikimedia.org/wiki/File:Music_Note_(61776)_-_The_Noun_Project.svg
+App icon music note: https://thenounproject.com/icon/music-note-61776 https://commons.wikimedia.org/wiki/File:Music_Note_(61776)_-_The_Noun_Project.svg recolored
+- not being able to seek
+- not being able to loop
+so I gave up and used the file:// protocol which just works for both of theseby (achen1296)

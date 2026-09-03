@@ -139,7 +139,8 @@ def track_file(parsed_url: ParseResultBytes, body: bytes | None):
             unquote(url.removeprefix("file://").removeprefix("localhost/"))
         )
     )
-    return str(path)
+    return "file://" + str(path)
+    # return str(path) # version for app:// protocol
 
 
 assert LIBRARY.file

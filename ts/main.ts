@@ -25,15 +25,15 @@ const createWindow = () => {
     win.loadFile("index.html");
 };
 
-protocol.registerSchemesAsPrivileged([
-    {
-        scheme: "app",
-        privileges: {
-            stream: true,
-            bypassCSP: true,
-        }
-    }
-]);
+// protocol.registerSchemesAsPrivileged([
+//     {
+//         scheme: "app",
+//         privileges: {
+//             stream: true,
+//             bypassCSP: true,
+//         }
+//     }
+// ]);
 
 let childProcess: ChildProcess | null = null;
 
@@ -113,7 +113,14 @@ app.whenReady().then(() => {
 
     createWindow();
 
-    protocol.handle("app", async (req) => {
+    /* wanted to do this properly according to electron docs https://www.electronjs.org/docs/latest/tutorial/security#18-avoid-usage-of-the-file-protocol-and-prefer-usage-of-custom-protocols
+    however, this led to some (the majority though not all) audio files having glitches like:
+    - not being able to seek
+    - not being able to loop
+    so I gave up and used the file:// protocol which just works for both of these */
+    /* protocol.handle("app", async (req) => {
+        console.log(req);
+
         // use host to determine how to interpret the result, but the rest of the URL parsing is done on the Python side
         const { host } = new URL(req.url);
 
@@ -127,15 +134,16 @@ app.whenReady().then(() => {
         }
 
         if (host === "trackFile" || host === "artwork") {
-            // already stored as a file:// URL
-            return net.fetch(pathToFileURL(response.toString()).toString());
+            let r = await net.fetch(pathToFileURL(response.toString()).toString());
+            console.log(r);
+            return r;
         } else {
-            return new Response(response, {
-                status: 200,
-                headers: { "content-type": "text" }
-            });
+        return new Response(response, {
+            status: 200,
+            headers: { "content-type": "text" }
+        });
         }
-    });
+    }); */
 
     app.on("activate", () => {
         if (BrowserWindow.getAllWindows().length === 0) {
