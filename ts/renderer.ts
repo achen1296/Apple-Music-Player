@@ -627,12 +627,17 @@ const EXP_FACTOR = Math.log(1 / MIN_VOLUME);
 function setVolume(volume: number, save = true, updateGUI = false) {
     settings.volume = volume;
     // account for logarithmic human hearing
+    // with of course exception for 0% volume since the below formula cannot ever result in 0 (although I'm not sure why anyone would ever use 0% volume)
     // map 0% to MIN_VOLUME (cannot be 0) and 100% to 1.0
     // when volume = 0%, Math.exp(0) = 1 hence multiplication by MIN_VOLUME
     // when volume = 100%, want 1 = MIN_VOLUME * exp(EXP_FACTOR * volume)
     // 1/MIN_VOLUME = exp(EXP_FACTOR * 1)
     // ln(1/MIN_VOLUME) = EXP_FACTOR
-    currentAudio.volume = MIN_VOLUME * Math.exp(EXP_FACTOR * volume);
+    if (volume === 0) {
+        currentAudio.volume = 0;
+    } else {
+        currentAudio.volume = MIN_VOLUME * Math.exp(EXP_FACTOR * volume);
+    }
     if (updateGUI) {
         volumeSlider.value = `${volume * 100}`;
     }
