@@ -26,6 +26,15 @@ Obviously, the reason why I wanted to make this alternative GUI at all is to add
 
 ## Modified Features
 
+### Hotkeys
+
+- Space = play/pause
+- R = toggle repeat
+- S = toggle shuffle
+- P = toggle preserve pitch
+- Arrow up/down = volume up/down if ctrl down but not shift, play rate up/down if ctrl and shift both down
+- Arrow left/right = seek if not ctrl down, skip backwards/forwards if ctrl down
+
 ### Play and Skip Count
 
 Experimentally in the official program, the play count increments when:
@@ -110,6 +119,7 @@ For some combination of the following reasons...:
 # Asset Credits
 
 App icon music note: https://thenounproject.com/icon/music-note-61776 https://commons.wikimedia.org/wiki/File:Music_Note_(61776)_-_The_Noun_Project.svg recolored
+
 - not being able to seek
 - not being able to loop
-so I gave up and used the file:// protocol which just works for both of theseby (achen1296)
+  so I gave up and used the file:// protocol which just works for both of theseby (achen1296)

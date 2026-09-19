@@ -620,7 +620,9 @@ currentAudio.addEventListener("timeupdate", ev => {
     playTimeSlider.value = `${currentAudio.currentTime}`;
     if (navigator.mediaSession) {
         navigator.mediaSession.setPositionState({
+            duration: currentAudio.duration,
             position: currentAudio.currentTime,
+            playbackRate: currentAudio.playbackRate,
         });
     }
 });
@@ -672,6 +674,8 @@ currentAudio.addEventListener("durationchange", ev => {
     if (navigator.mediaSession) {
         navigator.mediaSession.setPositionState({
             duration: currentAudio.duration,
+            position: currentAudio.currentTime,
+            playbackRate: currentAudio.playbackRate,
         });
     }
 });
@@ -693,13 +697,15 @@ currentAudio.addEventListener("ended", ev => {
     }
 });
 
-playPauseButton.addEventListener("click", ev => {
+function togglePlaying() {
     if (currentAudio.paused) {
         currentAudio.play();
     } else {
         currentAudio.pause();
     }
-});
+}
+
+playPauseButton.addEventListener("click", togglePlaying);
 
 if (navigator.mediaSession) {
     navigator.mediaSession.setActionHandler("pause", () => currentAudio.pause());
@@ -735,6 +741,82 @@ function setVolume(volume: number, save = true, updateGUI = false) {
 
 volumeSlider.addEventListener("input", ev => setVolume(Number(volumeSlider.value) / 100));
 
+let ctrlDown = false; // or "meta" key which is either Windows key or Mac command key (wanted to support the latter so why not allow the former as well?)
+let shiftDown = false;
+
+function upDownArrows(sign: number) {
+    if (ctrlDown) {
+        if (shiftDown) {
+            setPlayRate(Number(playRateSlider.value) + sign * Number(playRateSlider.step), true, true);
+        } else {
+            setVolume((Number(volumeSlider.value) + sign * Number(volumeSlider.step)) / 100, true, true);
+        }
+    }
+}
+
+function leftRightArrows(sign: number) {
+    if (ctrlDown) {
+        if (sign < 0) {
+            previousTrack();
+        } else {
+            nextTrack();
+        }
+    } else {
+        seek(sign * 5);
+    }
+}
+
+window.addEventListener("keydown", (ev) => {
+    ev.preventDefault(); // e.g. don't scroll
+
+    switch (ev.key) {
+        case " ":
+            togglePlaying();
+            break;
+        case "r":
+            toggleRepeatOne();
+            break;
+        case "s":
+            toggleShuffle();
+            break;
+        case "p":
+            togglePreservePitch(true, true);
+            break;
+
+        case "Control":
+        case "Meta":
+            ctrlDown = true;
+            break;
+        case "Shift":
+            shiftDown = true;
+            break;
+
+        case "ArrowUp":
+            upDownArrows(1);
+            break;
+        case "ArrowDown":
+            upDownArrows(-1);
+            break;
+        case "ArrowLeft":
+            leftRightArrows(-1);
+            break;
+        case "ArrowRight":
+            leftRightArrows(1);
+            break;
+    }
+});
+window.addEventListener("keyup", (ev) => {
+    switch (ev.key) {
+        case "Control":
+        case "Meta":
+            ctrlDown = false;
+            break;
+        case "Shift":
+            shiftDown = false;
+            break;
+    }
+});
+
 function setPlayRate(playRate: number, save = true, updateGUI = false) {
     settings.playRate = playRate;
     currentAudio.playbackRate = playRate;
@@ -751,7 +833,9 @@ function setPlayRate(playRate: number, save = true, updateGUI = false) {
 
     if (navigator.mediaSession) {
         navigator.mediaSession.setPositionState({
-            playbackRate: playRate,
+            duration: currentAudio.duration,
+            position: currentAudio.currentTime,
+            playbackRate: currentAudio.playbackRate,
         });
     }
 }
@@ -769,6 +853,10 @@ function setPreservePitch(p: boolean, save = true, updateGUI = false) {
     if (updateGUI) {
         preservePitchCheckbox.checked = p;
     }
+}
+
+function togglePreservePitch(save = true, updateGUI = false) {
+    setPreservePitch(!currentAudio.preservesPitch, save, updateGUI);
 }
 
 preservePitchCheckbox.addEventListener("change", ev => setPreservePitch(preservePitchCheckbox.checked));
