@@ -646,6 +646,27 @@ playTimeSlider.addEventListener("change", ev => {
     }
 });
 
+function seek(seconds: number) {
+    let t = currentAudio.currentTime;
+    t += seconds;
+    if (t < 0) {
+        t = 0;
+    } else if (t >= currentAudio.duration) {
+        t = currentAudio.duration;
+    }
+    currentAudio.currentTime = t;
+}
+
+if (navigator.mediaSession) {
+    navigator.mediaSession.setActionHandler("seekbackward", ({ seekOffset }) => seek(- (seekOffset ?? 5)));
+    navigator.mediaSession.setActionHandler("seekforward", ({ seekOffset }) => seek(seekOffset ?? 5));
+    navigator.mediaSession.setActionHandler("seekto", ({ seekTime }) => {
+        if (seekTime) {
+            currentAudio.currentTime = seekTime;
+        }
+    });
+}
+
 currentAudio.addEventListener("durationchange", ev => {
     playTimeSlider.max = `${currentAudio.duration}`;
     if (navigator.mediaSession) {
@@ -658,6 +679,11 @@ currentAudio.addEventListener("durationchange", ev => {
 skipPreviousButton.addEventListener("click", ev => previousTrack());
 
 skipNextButton.addEventListener("click", ev => nextTrack());
+
+if (navigator.mediaSession) {
+    navigator.mediaSession.setActionHandler("previoustrack", previousTrack);
+    navigator.mediaSession.setActionHandler("nexttrack", nextTrack);
+}
 
 currentAudio.addEventListener("ended", ev => {
     if (settings.repeatOne) {
@@ -674,6 +700,11 @@ playPauseButton.addEventListener("click", ev => {
         currentAudio.pause();
     }
 });
+
+if (navigator.mediaSession) {
+    navigator.mediaSession.setActionHandler("pause", () => currentAudio.pause());
+    navigator.mediaSession.setActionHandler("play", () => currentAudio.play());
+}
 
 const MIN_VOLUME = 0.005;
 const EXP_FACTOR = Math.log(1 / MIN_VOLUME);
