@@ -618,6 +618,11 @@ function setPlayTimeText(currentTime: number, duration: number) {
 currentAudio.addEventListener("timeupdate", ev => {
     setPlayTimeText(currentAudio.currentTime, currentAudio.duration);
     playTimeSlider.value = `${currentAudio.currentTime}`;
+    if (navigator.mediaSession) {
+        navigator.mediaSession.setPositionState({
+            position: currentAudio.currentTime,
+        });
+    }
 });
 
 let inputtingOnPlayTimeSlider = false;
@@ -643,6 +648,11 @@ playTimeSlider.addEventListener("change", ev => {
 
 currentAudio.addEventListener("durationchange", ev => {
     playTimeSlider.max = `${currentAudio.duration}`;
+    if (navigator.mediaSession) {
+        navigator.mediaSession.setPositionState({
+            duration: currentAudio.duration,
+        });
+    }
 });
 
 skipPreviousButton.addEventListener("click", ev => previousTrack());
@@ -706,6 +716,12 @@ function setPlayRate(playRate: number, save = true, updateGUI = false) {
 
     if (updateGUI) {
         playRateSlider.value = `${playRate}`;
+    }
+
+    if (navigator.mediaSession) {
+        navigator.mediaSession.setPositionState({
+            playbackRate: playRate,
+        });
     }
 }
 
