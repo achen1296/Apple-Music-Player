@@ -1,17 +1,18 @@
 "use strict";
 
-import { ipcMain, net } from "electron";
-import { app, BrowserWindow, protocol } from "electron/main";
+import { ipcMain } from "electron";
+import { app, BrowserWindow } from "electron/main";
 import { ChildProcess, spawn } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import * as zmq from "zeromq";
 
 const BACKEND_PORT = 0xA91E; // hexspeak approximation of "Apple" which is also a valid port
 
-const createWindow = () => {
-    const win = new BrowserWindow({
+let window: BrowserWindow | null = null;
+
+function createWindow() {
+    window = new BrowserWindow({
         show: false,
         webPreferences: {
             preload: path.join(__dirname, "preload.js"),
@@ -19,10 +20,10 @@ const createWindow = () => {
         icon: path.join(__dirname, "assets", "icon.png"),
     });
 
-    win.maximize();
-    win.show();
+    window.maximize();
+    window.show();
 
-    win.loadFile("index.html");
+    window.loadFile("index.html");
 };
 
 // protocol.registerSchemesAsPrivileged([
@@ -104,57 +105,71 @@ function saveSettings(settings: any) {
     writeFileSync("settings.json", JSON.stringify(settings));
 }
 
-app.whenReady().then(() => {
-    spawnBackend();
-
-    ipcMain.handle("backendRequest", (ev, url: string, body?: string) => backendRequest(url, body));
-    ipcMain.handle("loadSettings", (ev) => loadSettings());
-    ipcMain.handle("saveSettings", (ev, settings: Object) => saveSettings(settings));
-
-    createWindow();
-
-    /* wanted to do this properly according to electron docs https://www.electronjs.org/docs/latest/tutorial/security#18-avoid-usage-of-the-file-protocol-and-prefer-usage-of-custom-protocols
-    however, this led to some (the majority though not all) audio files having glitches like:
-    - not being able to seek
-    - not being able to loop
-    so I gave up and used the file:// protocol which just works for both of these */
-    /* protocol.handle("app", async (req) => {
-        console.log(req);
-
-        // use host to determine how to interpret the result, but the rest of the URL parsing is done on the Python side
-        const { host } = new URL(req.url);
-
-        const response = await backendRequest(req.url, await req.text());
-
-        if (response.startsWith("error ")) {
-            return new Response(response.slice("error ".length), {
-                status: 400,
-                headers: { "content-type": "text/html" }
-            });
-        }
-
-        if (host === "trackFile" || host === "artwork") {
-            let r = await net.fetch(pathToFileURL(response.toString()).toString());
-            console.log(r);
-            return r;
-        } else {
-        return new Response(response, {
-            status: 200,
-            headers: { "content-type": "text" }
-        });
-        }
-    }); */
-
-    app.on("activate", () => {
-        if (BrowserWindow.getAllWindows().length === 0) {
-            createWindow();
-        }
-    });
-
-});
-
 app.on("window-all-closed", () => {
     if (process.platform !== "darwin") {
         app.quit();
     }
 });
+
+if (!app.requestSingleInstanceLock()) {
+    app.quit();
+} else {
+    app.on("second-instance", (event, commandLine, workingDirectory, additionalData) => {
+        // Someone tried to run a second instance, we should focus our window.
+        if (window) {
+            if (window.isMinimized()) {
+                window.restore();
+            }
+            window.focus();
+        }
+    });
+
+    app.whenReady().then(() => {
+        spawnBackend();
+
+        ipcMain.handle("backendRequest", (ev, url: string, body?: string) => backendRequest(url, body));
+        ipcMain.handle("loadSettings", (ev) => loadSettings());
+        ipcMain.handle("saveSettings", (ev, settings: Object) => saveSettings(settings));
+
+        createWindow();
+
+        /* wanted to do this properly according to electron docs https://www.electronjs.org/docs/latest/tutorial/security#18-avoid-usage-of-the-file-protocol-and-prefer-usage-of-custom-protocols
+        however, this led to some (the majority though not all) audio files having glitches like:
+        - not being able to seek
+        - not being able to loop
+        so I gave up and used the file:// protocol which just works for both of these */
+        /* protocol.handle("app", async (req) => {
+            console.log(req);
+
+            // use host to determine how to interpret the result, but the rest of the URL parsing is done on the Python side
+            const { host } = new URL(req.url);
+
+            const response = await backendRequest(req.url, await req.text());
+
+            if (response.startsWith("error ")) {
+                return new Response(response.slice("error ".length), {
+                    status: 400,
+                    headers: { "content-type": "text/html" }
+                });
+            }
+
+            if (host === "trackFile" || host === "artwork") {
+                let r = await net.fetch(pathToFileURL(response.toString()).toString());
+                console.log(r);
+                return r;
+            } else {
+            return new Response(response, {
+                status: 200,
+                headers: { "content-type": "text" }
+            });
+            }
+        }); */
+
+        app.on("activate", () => {
+            if (BrowserWindow.getAllWindows().length === 0) {
+                createWindow();
+            }
+        });
+
+    });
+}
