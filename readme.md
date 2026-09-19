@@ -32,8 +32,10 @@ Obviously, the reason why I wanted to make this alternative GUI at all is to add
 - R = toggle repeat
 - S = toggle shuffle
 - P = toggle preserve pitch
-- Arrow up/down = volume up/down if ctrl down but not shift, play rate up/down if ctrl and shift both down
+- Arrow up/down = volume up/down if not ctrl down, play rate up/down if ctrl down
 - Arrow left/right = seek if not ctrl down, skip backwards/forwards if ctrl down
+
+(Ctrl means ctrl key OR command key on Mac OR Windows key)
 
 ### Play and Skip Count
 

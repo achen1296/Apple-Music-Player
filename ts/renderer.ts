@@ -742,15 +742,13 @@ function setVolume(volume: number, save = true, updateGUI = false) {
 volumeSlider.addEventListener("input", ev => setVolume(Number(volumeSlider.value) / 100));
 
 let ctrlDown = false; // or "meta" key which is either Windows key or Mac command key (wanted to support the latter so why not allow the former as well?)
-let shiftDown = false;
+// let shiftDown = false;
 
 function upDownArrows(sign: number) {
     if (ctrlDown) {
-        if (shiftDown) {
-            setPlayRate(Number(playRateSlider.value) + sign * Number(playRateSlider.step), true, true);
-        } else {
-            setVolume((Number(volumeSlider.value) + sign * Number(volumeSlider.step)) / 100, true, true);
-        }
+        setPlayRate(Number(playRateSlider.value) + sign * Number(playRateSlider.step), true, true);
+    } else {
+        setVolume((Number(volumeSlider.value) + sign * Number(volumeSlider.step)) / 100, true, true);
     }
 }
 
@@ -787,9 +785,9 @@ window.addEventListener("keydown", (ev) => {
         case "Meta":
             ctrlDown = true;
             break;
-        case "Shift":
-            shiftDown = true;
-            break;
+        // case "Shift":
+        //     shiftDown = true;
+        //     break;
 
         case "ArrowUp":
             upDownArrows(1);
@@ -811,9 +809,9 @@ window.addEventListener("keyup", (ev) => {
         case "Meta":
             ctrlDown = false;
             break;
-        case "Shift":
-            shiftDown = false;
-            break;
+        // case "Shift":
+        //     shiftDown = false;
+        //     break;
     }
 });
 
