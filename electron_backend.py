@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 import sqlite3
@@ -168,6 +169,11 @@ def artwork(parsed_url: ParseResultBytes, body: bytes | None):
     return "assets/default_artwork.png"
 
 
+def artwork_data(parsed_url: ParseResultBytes, body: bytes | None):
+    with open(artwork(parsed_url, body), "rb") as f:
+        return base64.b64encode(f.read())
+
+
 first_save_this_instance = True
 most_recent_backup: datetime | None = None
 
@@ -293,6 +299,7 @@ HANDLERS: dict[str, Callable[[ParseResultBytes, bytes | None], bytes | str | Non
         artist_update,
         track_update,
         playlist_update,
+        artwork_data,
     ]
 }
 

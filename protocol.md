@@ -49,6 +49,12 @@ Pathname: Item ID
 
 Returns: File path
 
+### Host: artworkData
+
+Pathname: Item ID
+
+Returns: Base 64 encoded image data (used for media session integration which does not support a file:// src, but does support a data: src)
+
 ## Updating Library Data
 
 If any modification is made, the library file will be saved once the program is closed. (See also [readme](readme.md) for backup strategy.)

@@ -92,6 +92,9 @@ const request = {
     playlistUpdate: async function (playlistID: string, data: RecursivePartial<PlaylistMeta>) {
         await backendRequest(`//playlistUpdate/${playlistID}`, JSON.stringify(data));
     },
+    artworkData: async function (artworkID: string) {
+        return await backendRequest(`//artworkData/${artworkID}`);
+    },
 };
 
 // const customSrc = {
@@ -109,7 +112,7 @@ const customSrc = {
 
 // player
 
-const currentTrackImage = document.getElementById("currentTrackImage") as HTMLImageElement;
+const currentTrackArtwork = document.getElementById("currentTrackImage") as HTMLImageElement;
 const currentTrackNameText = document.getElementById("currentTrackNameText") as HTMLSpanElement;
 const currentTrackArtistText = document.getElementById("currentTrackArtistText") as HTMLSpanElement;
 const currentTrackAlbumText = document.getElementById("currentTrackAlbumText") as HTMLSpanElement;
@@ -317,15 +320,56 @@ async function incrementSkips(trackID: string) {
     console.log(`${trackID} incremented skips to ${update.plays_skips.skip_count} (true ${update.plays_skips.true_skip_count}), last skipped ${update.plays_skips.date_last_skipped}`);
 }
 
+function mediaMetadata() {
+    if (navigator.mediaSession && !navigator.mediaSession.metadata) {
+        navigator.mediaSession.metadata = new MediaMetadata();
+    }
+    return navigator.mediaSession?.metadata;
+}
+
+function setTrackNameText(t: string) {
+    currentTrackNameText.innerText = t;
+    const mm = mediaMetadata();
+    if (mm) {
+        mm.title = t;
+    }
+}
+
+function setArtistText(t: string) {
+    currentTrackArtistText.innerText = t;
+    const mm = mediaMetadata();
+    if (mm) {
+        mm.artist = t;
+    }
+}
+
+function setAlbumText(t: string) {
+    currentTrackAlbumText.innerText = t;
+    const mm = mediaMetadata();
+    if (mm) {
+        mm.album = t;
+    }
+}
+
+async function setArtworkSource(id: string) {
+    currentTrackArtwork.src = await customSrc.artwork("00");
+    const mm = mediaMetadata();
+    if (mm) {
+        // "MediaImage src can only be of http/https/data/blob scheme"
+        mm.artwork = [{ src: "data:image;base64," + await request.artworkData(id) }];
+    }
+}
+
+
 async function switchTrack(trackID: string | null) {
     if (!trackID) {
         // e.g. undefined for out-of-bounds index, i.e. empty track queue, reaching the end, or skipping backwards beyond the start
         currentAudio.src = "";
         // this should load the default image
-        currentTrackImage.src = await customSrc.artwork("00");
-        currentTrackNameText.innerText = "...";
-        currentTrackArtistText.innerText = "...";
-        currentTrackAlbumText.innerText = "...";
+        await setArtworkSource("00");
+        setTrackNameText("...");
+        setArtistText("...");
+        setAlbumText("...");
         return;
     }
 
@@ -362,13 +406,13 @@ async function switchTrack(trackID: string | null) {
         currentAudio.play();
     }
 
-    currentTrackImage.src = await customSrc.artwork(trackID);
+    await setArtworkSource(trackID);
 
     const { name, album, artist } = await request.trackMeta(trackID);
 
-    currentTrackNameText.innerText = name || "(no name)";
-    currentTrackArtistText.innerText = artist || "(no artist)";
-    currentTrackAlbumText.innerText = album || "(no album)";
+    setTrackNameText(name || "(no name)");
+    setArtistText(artist || "(no artist)");
+    setAlbumText(album || "(no album)");
 
     await refillTrackQueue();
 }
