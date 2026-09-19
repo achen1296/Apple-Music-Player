@@ -320,7 +320,7 @@ def handle_request(parsed_url: ParseResultBytes, body: bytes | None) -> bytes:
     return result
 
 
-DEBUG_OUT: Final[bool] = True
+DEBUG_OUT: Final[bool] = False
 
 
 def main(port: int):
