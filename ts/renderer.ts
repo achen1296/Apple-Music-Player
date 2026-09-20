@@ -814,6 +814,13 @@ window.addEventListener("keyup", (ev) => {
         //     break;
     }
 });
+window.addEventListener("focus", (ev) => {
+    // if focus was switched with the key held down, we will never get the keyup event
+    // this happens most easily when switching focus using the "Meta" key
+    // technically, this will now be wrong in the reverse direction if the key is still held down when the user comes back... but that's a lot less likely
+    ctrlDown = false;
+    // shiftDown = false;
+});
 
 function setPlayRate(playRate: number, save = true, updateGUI = false) {
     settings.playRate = playRate;
