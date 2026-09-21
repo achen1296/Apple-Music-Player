@@ -615,9 +615,7 @@ function setPlayTimeText(currentTime: number, duration: number) {
     playTimeText.innerText = `${currentMinutes}:${SECONDS_FORMAT.format(currentSeconds)} / ${durationMinutes}:${SECONDS_FORMAT.format(durationSeconds)}`;
 }
 
-currentAudio.addEventListener("timeupdate", ev => {
-    setPlayTimeText(currentAudio.currentTime, currentAudio.duration);
-    playTimeSlider.value = `${currentAudio.currentTime}`;
+function setMediaSessionPositionState() {
     if (navigator.mediaSession) {
         navigator.mediaSession.setPositionState({
             duration: currentAudio.duration,
@@ -625,6 +623,12 @@ currentAudio.addEventListener("timeupdate", ev => {
             playbackRate: currentAudio.playbackRate,
         });
     }
+}
+
+currentAudio.addEventListener("timeupdate", ev => {
+    setPlayTimeText(currentAudio.currentTime, currentAudio.duration);
+    playTimeSlider.value = `${currentAudio.currentTime}`;
+    setMediaSessionPositionState();
 });
 
 let inputtingOnPlayTimeSlider = false;
@@ -671,13 +675,7 @@ if (navigator.mediaSession) {
 
 currentAudio.addEventListener("durationchange", ev => {
     playTimeSlider.max = `${currentAudio.duration}`;
-    if (navigator.mediaSession) {
-        navigator.mediaSession.setPositionState({
-            duration: currentAudio.duration,
-            position: currentAudio.currentTime,
-            playbackRate: currentAudio.playbackRate,
-        });
-    }
+    setMediaSessionPositionState();
 });
 
 skipPreviousButton.addEventListener("click", ev => previousTrack());
@@ -836,13 +834,7 @@ function setPlayRate(playRate: number, save = true, updateGUI = false) {
         playRateSlider.value = `${playRate}`;
     }
 
-    if (navigator.mediaSession) {
-        navigator.mediaSession.setPositionState({
-            duration: currentAudio.duration,
-            position: currentAudio.currentTime,
-            playbackRate: currentAudio.playbackRate,
-        });
-    }
+    setMediaSessionPositionState();
 }
 
 playRateSlider.addEventListener("input", ev => setPlayRate(Number(playRateSlider.value)));
