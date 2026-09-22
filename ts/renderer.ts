@@ -763,11 +763,10 @@ function leftRightArrows(sign: number) {
 }
 
 window.addEventListener("keydown", (ev) => {
-    ev.preventDefault(); // e.g. don't scroll
-
     switch (ev.key) {
         case " ":
             togglePlaying();
+            ev.preventDefault(); // don't scroll
             break;
         case "r":
             toggleRepeatOne();
@@ -785,19 +784,24 @@ window.addEventListener("keydown", (ev) => {
             break;
         // case "Shift":
         //     shiftDown = true;
+        //     ev.preventDefault();
         //     break;
 
         case "ArrowUp":
             upDownArrows(1);
+            ev.preventDefault(); // don't scroll or change a different slider than the one this hotkey controls
             break;
         case "ArrowDown":
             upDownArrows(-1);
+            ev.preventDefault();
             break;
         case "ArrowLeft":
             leftRightArrows(-1);
+            ev.preventDefault();
             break;
         case "ArrowRight":
             leftRightArrows(1);
+            ev.preventDefault();
             break;
     }
 });
