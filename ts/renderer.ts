@@ -11,6 +11,7 @@ type Settings = {
 declare function backendRequest(url: string, body?: string): Promise<string>;
 declare function loadSettings(): Promise<any>;
 declare function saveSettings(settings: any): Promise<void>;
+declare function showItemInFolder(p: string): Promise<void>;
 
 function dateToInt(date: Date) {
     // .valueOf is in milliseconds, but only stored as integer seconds in library
@@ -419,12 +420,16 @@ async function switchTrack(trackID: string | null) {
 
 currentAudio.addEventListener("error", async e => {
     if (currentAudio.src) { // do not show this when setting to ""
-        let url;
-        if (trackNowPlaying) {
-            url = (await request.trackMeta(trackNowPlaying)).url;
-        }
+        // let url;
+        // if (trackNowPlaying) {
+        //     url = (await request.trackMeta(trackNowPlaying)).url;
+        // }
         // no useful information in event to show
-        alert(`Error occurred loading track:\n${currentAudio.src}. Does the file exist${url ? " at " + url : ""}?`);
+        // alert(`Error occurred loading track:\n${currentAudio.src}. Does the file exist${url ? " at " + url : ""}?`);
+        const path = decodeURI(currentAudio.src);
+        if (confirm(`Error occurred loading track:\n${path}. Does the file exist? Click OK to open the containing folder.`)) {
+            showItemInFolder(path.replace(/^file:\/\//, ""));
+        }
     }
 });
 

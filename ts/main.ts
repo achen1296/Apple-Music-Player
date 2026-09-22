@@ -1,6 +1,6 @@
 "use strict";
 
-import { ipcMain } from "electron";
+import { ipcMain, shell } from "electron";
 import { app, BrowserWindow } from "electron/main";
 import { ChildProcess, spawn } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -105,6 +105,8 @@ function saveSettings(settings: any) {
     writeFileSync("settings.json", JSON.stringify(settings));
 }
 
+const showItemInFolder = shell.showItemInFolder;
+
 app.on("window-all-closed", () => {
     if (process.platform !== "darwin") {
         app.quit();
@@ -130,6 +132,7 @@ if (!app.requestSingleInstanceLock()) {
         ipcMain.handle("backendRequest", (ev, url: string, body?: string) => backendRequest(url, body));
         ipcMain.handle("loadSettings", (ev) => loadSettings());
         ipcMain.handle("saveSettings", (ev, settings: Object) => saveSettings(settings));
+        ipcMain.handle("showItemInFolder", (ev, p: string) => showItemInFolder(p));
 
         createWindow();
 

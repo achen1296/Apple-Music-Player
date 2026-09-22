@@ -14,3 +14,7 @@ contextBridge.exposeInMainWorld(
 contextBridge.exposeInMainWorld(
     "saveSettings", (settings: any) => ipcRenderer.invoke("saveSettings", settings)
 );
+
+contextBridge.exposeInMainWorld(
+    "showItemInFolder", (p: string) => ipcRenderer.invoke("showItemInFolder", p)
+);
