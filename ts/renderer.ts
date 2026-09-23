@@ -427,8 +427,15 @@ currentAudio.addEventListener("error", async e => {
         // no useful information in event to show
         // alert(`Error occurred loading track:\n${currentAudio.src}. Does the file exist${url ? " at " + url : ""}?`);
         const path = decodeURI(currentAudio.src);
-        if (confirm(`Error occurred loading track:\n${path}. Does the file exist? Click OK to open the containing folder.`)) {
+        if (confirm(`Error occurred loading track:\n${path}. Does the file exist? Click OK to open the containing folder, or cancel to skip to the next song.`)) {
             showItemInFolder(path.replace(/^file:\/\//, ""));
+            if (confirm("Click OK again to attempt reloading the file after you've fixed it, or cancel to skip to the next song.")) {
+                currentAudio.src = currentAudio.src;
+            } else {
+                nextTrack();
+            }
+        } else {
+            nextTrack();
         }
     }
 });
