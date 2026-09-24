@@ -12,6 +12,7 @@ declare function backendRequest(url: string, body?: string): Promise<string>;
 declare function loadSettings(): Promise<any>;
 declare function saveSettings(settings: any): Promise<void>;
 declare function showItemInFolder(p: string): Promise<void>;
+declare function copyToClipboard(s: string): Promise<void>;
 
 function dateToInt(date: Date) {
     // .valueOf is in milliseconds, but only stored as integer seconds in library
@@ -427,8 +428,9 @@ currentAudio.addEventListener("error", async e => {
         // no useful information in event to show
         // alert(`Error occurred loading track:\n${currentAudio.src}. Does the file exist${url ? " at " + url : ""}?`);
         const path = decodeURI(currentAudio.src);
-        if (confirm(`Error occurred loading track:\n${path}. Does the file exist? Click OK to open the containing folder, or cancel to skip to the next song.`)) {
+        if (confirm(`Error occurred loading track:\n${path}. Does the file exist? Click OK to open the containing folder and copy the file's expected name to the clipboard, or cancel to skip to the next song.`)) {
             showItemInFolder(path.replace(/^file:\/\//, ""));
+            copyToClipboard(path.substring(path.lastIndexOf("/") + 1));
             if (confirm("Click OK again to attempt reloading the file after you've fixed it, or cancel to skip to the next song.")) {
                 currentAudio.src = currentAudio.src;
             } else {

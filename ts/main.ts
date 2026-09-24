@@ -1,6 +1,6 @@
 "use strict";
 
-import { ipcMain, shell } from "electron";
+import { clipboard, ipcMain, shell } from "electron";
 import { app, BrowserWindow } from "electron/main";
 import { ChildProcess, spawn } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -107,6 +107,8 @@ function saveSettings(settings: any) {
 
 const showItemInFolder = shell.showItemInFolder;
 
+const copyToClipboard = clipboard.writeText;
+
 app.on("window-all-closed", () => {
     if (process.platform !== "darwin") {
         app.quit();
@@ -133,6 +135,7 @@ if (!app.requestSingleInstanceLock()) {
         ipcMain.handle("loadSettings", (ev) => loadSettings());
         ipcMain.handle("saveSettings", (ev, settings: Object) => saveSettings(settings));
         ipcMain.handle("showItemInFolder", (ev, p: string) => showItemInFolder(p));
+        ipcMain.handle("copyToClipboard", (ev, s: string) => copyToClipboard(s));
 
         createWindow();
 

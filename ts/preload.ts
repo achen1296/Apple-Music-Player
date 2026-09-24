@@ -18,3 +18,7 @@ contextBridge.exposeInMainWorld(
 contextBridge.exposeInMainWorld(
     "showItemInFolder", (p: string) => ipcRenderer.invoke("showItemInFolder", p)
 );
+
+contextBridge.exposeInMainWorld(
+    "copyToClipboard", (s: string) => ipcRenderer.invoke("copyToClipboard", s)
+);
