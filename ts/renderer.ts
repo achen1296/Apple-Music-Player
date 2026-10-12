@@ -354,7 +354,7 @@ function setAlbumText(t: string) {
 }
 
 async function setArtworkSource(id: string) {
-    currentTrackArtwork.src = await customSrc.artwork("00");
+    currentTrackArtwork.src = await customSrc.artwork(id);
     const mm = mediaMetadata();
     if (mm) {
         // "MediaImage src can only be of http/https/data/blob scheme"
