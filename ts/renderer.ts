@@ -630,7 +630,12 @@ function setPlayTimeText(currentTime: number, duration: number) {
 }
 
 function setMediaSessionPositionState() {
-    if (navigator.mediaSession) {
+    if (
+        navigator.mediaSession
+        // setPositionState produces TypeError if these are NaN, suppress these useless errors in the console
+        && !isNaN(currentAudio.duration)
+        && !isNaN(currentAudio.currentTime)
+    ) {
         navigator.mediaSession.setPositionState({
             duration: currentAudio.duration,
             position: currentAudio.currentTime,
